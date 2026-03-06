@@ -1,5 +1,5 @@
 import { AppError} from "../types";
-import { sessionsRepository, usersRepository } from "../repositories";
+import {rolesRepository, sessionsRepository, usersRepository} from "../repositories";
 import {CreateUserPayload, User, UserSession} from "../schemas";
 
 import {
@@ -21,6 +21,19 @@ import { Request } from "express";
 import {userService} from "./users.service";
 
 export const authService = {
+  async register(data: CreateUserPayload){
+    const role = await rolesRepository.findByLabel("user");
+    if(!role) throw new AppError("User not found", 404);
+
+    data = {
+      ...data,
+      must_change_password: true,
+      role_id: role.id
+    }
+
+    return userService.create(data);
+  },
+
   async login(email: string, password: string, req?: Request) {
     if (email) {
       email = minimize(email);
@@ -28,13 +41,20 @@ export const authService = {
 
     const existingUser: User | null = await usersRepository.findByEmail(email);
 
+    console.log(existingUser);
+    console.log(existingUser?.is_activated);
+    console.log(existingUser?.email_verified);
+    console.log(existingUser?.must_change_password);
+
     if (
       !existingUser ||
       !existingUser.is_activated ||
       !existingUser.email_verified ||
       existingUser.must_change_password
-    )
+    ) {
       throw new AppError("Invalid user or password", 401);
+
+    }
 
     const checkPassword: boolean = await verifyPassword(
       password,

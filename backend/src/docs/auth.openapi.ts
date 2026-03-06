@@ -13,8 +13,34 @@ import {
   LoginPayloadSchema,
   LoginSchema,
   RefreshTokenSchema, RefreshTokenPayloadSchema, VerifyCodePayloadSchema, ResendCodePayloadSchema,
-  ChangePasswordPayloadSchema, ResetPasswordPayloadSchema, UserSchema
+  ChangePasswordPayloadSchema, ResetPasswordPayloadSchema, UserSchema, CreateUserPayloadSchema
 } from "../schemas";
+
+registry.registerPath({
+  method: "post",
+  security: [{ ApiKeyAuth: [] }],
+  path: "/auth/register",
+  tags: ["Auth"],
+  summary: "Register",
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: CreateUserPayloadSchema,
+        },
+      },
+    },
+  },
+  responses: {
+    200: JsonResponse(UserSchema, "User created"),
+    400: BadRequest,
+    401: UnauthorizedResponse,
+    403: ForbiddenResponse,
+    404: NotFoundResponse,
+    409: ConflictResponse,
+    500: ServerErrorResponse,
+  },
+});
 
 registry.registerPath({
   method: "post",

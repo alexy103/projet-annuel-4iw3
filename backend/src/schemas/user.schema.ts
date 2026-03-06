@@ -1,9 +1,5 @@
 import zod from "zod";
 import { registry } from "../docs/openapi.registry";
-import { AppError } from "../types";
-
-const domain: string | undefined = process.env.DOMAIN;
-if (!domain) throw new AppError("Server Error", 500);
 
 const UserBaseSchema = zod
   .object({
@@ -42,9 +38,6 @@ const UserBaseSchema = zod
     email: zod
       .email()
       .max(254, "Email too long")
-      .refine((email) => email.endsWith(domain), {
-        message: "Invalid email",
-      })
       .openapi({
         description: "User email",
         example: "john.doe@test.com",

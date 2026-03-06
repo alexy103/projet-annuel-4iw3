@@ -25,6 +25,15 @@ export const login = async (req: Request, res: Response) => {
   }
 };
 
+export const register = async (req: Request, res: Response) => {
+  try {
+    const user = await authService.register(req.body);
+    return ApiResponse.success(res, user);
+  } catch (error) {
+    return ApiResponse.getError(res, error);
+  }
+};
+
 export const refreshToken = async (req: Request, res: Response) => {
   try {
     const refreshToken: string | undefined = req.body.refresh_token;

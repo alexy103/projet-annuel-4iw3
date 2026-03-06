@@ -4,7 +4,7 @@ import {
   changePassword,
   login,
   logout,
-  refreshToken,
+  refreshToken, register,
   resendCode,
   resetPassword,
   verifyCode,
@@ -14,6 +14,8 @@ import { requireApiKey, requireAuth } from "../middlewares";
 export const authRouter: Router = Router();
 
 authRouter.post("/login", requireApiKey, login);
+
+authRouter.post("/register", requireApiKey, register);
 
 authRouter.post("/refresh", requireApiKey, requireAuth(), refreshToken);
 
