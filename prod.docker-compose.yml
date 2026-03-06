@@ -1,7 +1,7 @@
 services:
   db:
     image: postgres:16
-    container_name: annuel-postgre
+    container_name: annuel-postgres
     restart: always
     shm_size: 128mb
     environment:
