@@ -13,6 +13,7 @@ exports.up = (pgm) => {
       email_verification_expires_at TIMESTAMP,
       is_activated BOOLEAN NOT NULL DEFAULT true,
       role_id INTEGER NOT NULL REFERENCES roles(id) ON DELETE RESTRICT,
+      clinic_id INTEGER REFERENCES clinics(id) ON DELETE RESTRICT,
       created_at TIMESTAMP DEFAULT now(),
       updated_at TIMESTAMP DEFAULT now()
     )
