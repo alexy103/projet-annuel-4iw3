@@ -1,26 +1,43 @@
 #!/bin/bash
-echo "Lancement du docker..."
+
+set -e
+
+docker info >/dev/null 2>&1 || { echo "❌ Docker n'est pas démarré"; exit 1; }
+
+echo "🚀 Lancement du docker..."
 cp .env.dev.example .env
-mkdir backend/docker_data
+mkdir -p backend/docker_data
+
+set -a
+source .env
+set +a
+
 docker compose -f dev.docker-compose.yml up -d --build
 
 echo ""
 
-echo "Installation des dépendances du backend..."
+echo "📦 Installation des dépendances du backend..."
 cd backend/
 cp .env.dev.example .env
 npm install
 
 echo ""
 
-sleep 20
+echo "⏳ Attente que PostgreSQL soit prêt..."
 
-echo "Lancement des migrations..."
+until [ "$(docker inspect -f '{{.State.Health.Status}}' annuel-postgres)" = "healthy" ]; do
+  echo "Postgres pas encore prêt..."
+  sleep 2
+done
+
+echo "✅ PostgreSQL prêt"
+
+echo "🔄 Lancement des migrations..."
 npm run migrate:up
 
 echo ""
 
-echo "Build de l'app"
+echo "🏗 Build de l'app..."
 npm run build
 
-echo ""
+echo "✅ Setup terminé"

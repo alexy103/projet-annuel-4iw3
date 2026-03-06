@@ -4,7 +4,7 @@ docker compose -f dev.docker-compose.yml down
 
 echo ""
 echo "Suppression des images / volumes docker..."
-docker system prune
+docker system prune -a
 
 echo ""
 echo "Suppression du .env..."
