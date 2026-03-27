@@ -4,6 +4,7 @@ exports.up = (pgm) => {
       id SERIAL PRIMARY KEY,
       date DATE NOT NULL,
       note TEXT,
+      quantity SMALLINT,
       treatment_type_id INTEGER NOT NULL REFERENCES treatment_types(id) ON DELETE RESTRICT,
       medicine_id INTEGER REFERENCES medicines(id) ON DELETE RESTRICT,
       animal_id INTEGER NOT NULL REFERENCES animals(id) ON DELETE RESTRICT,
