@@ -7,7 +7,7 @@ const RoleBaseSchema = zod
       .string()
       .min(1, "Label is required")
       .max(100, "Label to long (max 100)")
-      .trim() // delete spaces
+      .trim()
       .refine((label: string): boolean => label !== "", "Label cannot be empty")
       .openapi({
         description: "Label of role (maximum 100 characters)",
