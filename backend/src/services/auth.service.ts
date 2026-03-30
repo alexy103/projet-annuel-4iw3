@@ -41,11 +41,6 @@ export const authService = {
 
     const existingUser: User | null = await usersRepository.findByEmail(email);
 
-    console.log(existingUser);
-    console.log(existingUser?.is_activated);
-    console.log(existingUser?.email_verified);
-    console.log(existingUser?.must_change_password);
-
     if (
       !existingUser ||
       !existingUser.is_activated ||
