@@ -1,4 +1,6 @@
-exports.up = (pgm) => {
+const { hashPassword } = require("../src/utils/migration-helpers/helpers");
+
+exports.up = async (pgm) => {
   pgm.sql(`
     CREATE TABLE IF NOT EXISTS users (
       id SERIAL PRIMARY KEY,
@@ -19,9 +21,11 @@ exports.up = (pgm) => {
     )
   `);
 
+  const passwordHashed = await hashPassword("Developpeur@12345");
+
   pgm.sql(`
     INSERT INTO users(last_name, first_name, email, password_hash, must_change_password, email_verified,is_activated, role_id ) VALUES
-        ('Admin', 'admin', 'admin@example.com', 'Developpeur@12345', true , false, true, 1)
+        ('Admin', 'admin', 'admin@example.com', '${passwordHashed}', false , true, true, 1)
   `);
 };
 
