@@ -38,7 +38,7 @@ export const requireAuth = (...allowedRoles: string[]) => {
       const userRole: Role = await rolesRepository.findById(user.role_id);
 
       if (allowedRoles.length == 0) {
-        allowedRoles = ["admin", "user"];
+        allowedRoles = ["admin", "user", "clinic"];
       }
       const hasRole: boolean = allowedRoles.some(
         (role: string) => userRole.label === role,
