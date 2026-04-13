@@ -2,6 +2,7 @@ exports.up = (pgm) => {
   pgm.sql(`
     CREATE TABLE IF NOT EXISTS clinics (
       id SERIAL PRIMARY KEY,
+      name VARCHAR(255) NOT NULL,
       address VARCHAR(255) NOT NULL,
       city VARCHAR(255) NOT NULL,
       postcode VARCHAR(6) NOT NULL,

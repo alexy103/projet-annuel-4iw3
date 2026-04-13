@@ -12,7 +12,7 @@ exports.up = (pgm) => {
       allergies TEXT,
       is_shared BOOLEAN DEFAULT FALSE,
       is_deceased BOOLEAN DEFAULT FALSE,
-      microchip_id INTEGER REFERENCES microships(id) ON DELETE RESTRICT,
+      microship_id INTEGER REFERENCES microships(id) ON DELETE RESTRICT,
       species_id INTEGER NOT NULL REFERENCES species(id) ON DELETE RESTRICT,
       user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
       created_at TIMESTAMP DEFAULT now(),

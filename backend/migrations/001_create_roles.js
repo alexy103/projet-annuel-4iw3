@@ -11,7 +11,8 @@ exports.up = (pgm) => {
   pgm.sql(`
     INSERT INTO roles(label) VALUES
         ('admin'),
-        ('user')
+        ('user'),
+        ('clinic')
     ON CONFLICT(label) DO NOTHING
   `);
 };

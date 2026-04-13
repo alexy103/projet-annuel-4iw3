@@ -3,7 +3,7 @@ exports.up = (pgm) => {
     CREATE TABLE IF NOT EXISTS height_records (
       id SERIAL PRIMARY KEY,
       date DATE NOT NULL,
-      height INTEGER NOT NULL,
+      height DECIMAL(2,2) NOT NULL,
       animal_id INTEGER NOT NULL REFERENCES animals(id) ON DELETE RESTRICT,
       created_at TIMESTAMP DEFAULT now(),
       updated_at TIMESTAMP DEFAULT now()
