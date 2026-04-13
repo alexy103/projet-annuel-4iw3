@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import ApiResponse from "../utils/api-responses.utils";
 import { User, UserPermission } from "../schemas";
 import { userService } from "../services";
+import {AuthenticatedRequest} from "../types";
 
 export const getUsers = async (req: Request, res: Response) => {
   try {
@@ -64,25 +65,49 @@ export const updateUserEmailVerified = async (req: Request, res: Response) => {
   }
 };
 
+export const updateUserClinicId = async (req: Request, res: Response) => {
+  try {
+    const userId: string | undefined = req.params.userId;
+    const clinicId : number = req.body.clinic_id;
+    if (
+      userId === undefined ||
+      userId === null
+    ) {
+      return ApiResponse.badRequest(
+        res,
+        "User ID is required",
+      );
+    }
+
+    const user: User = await userService.setClinic(
+      Number(userId),
+      clinicId,
+    );
+    return ApiResponse.success(res, user);
+  } catch (error) {
+    return ApiResponse.getError(res, error);
+  }
+};
+
 export const toggleUserActivation = async (req: Request, res: Response) => {
   try {
     const userId: string | undefined = req.params.userId;
     const isActivated: boolean = req.body.isActivated;
     if (
-      userId === undefined ||
-      userId === null ||
-      isActivated === undefined ||
-      isActivated == null
+        userId === undefined ||
+        userId === null ||
+        isActivated === undefined ||
+        isActivated == null
     ) {
       return ApiResponse.badRequest(
-        res,
-        "User ID and isActivated are required",
+          res,
+          "User ID and isActivated are required",
       );
     }
 
     const user: User = await userService.setActivation(
-      Number(userId),
-      isActivated,
+        Number(userId),
+        isActivated,
     );
     return ApiResponse.success(res, user);
   } catch (error) {
