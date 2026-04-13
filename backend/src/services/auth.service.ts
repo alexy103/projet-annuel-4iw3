@@ -1,5 +1,5 @@
 import { AppError} from "../types";
-import {rolesRepository, sessionsRepository, usersRepository} from "../repositories";
+import {clinicsRepository, rolesRepository, sessionsRepository, usersRepository} from "../repositories";
 import {CreateUserPayload, User, UserSession} from "../schemas";
 
 import {
@@ -24,6 +24,11 @@ export const authService = {
   async register(data: CreateUserPayload){
     const role = await rolesRepository.findByLabel("user");
     if(!role) throw new AppError("User not found", 404);
+
+    if(data.clinic_id){
+      const clinic = await clinicsRepository.findById(data.clinic_id);
+      if(!clinic) throw new AppError("Clinic not found", 404);
+    }
 
     data = {
       ...data,

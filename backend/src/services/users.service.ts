@@ -4,10 +4,11 @@ import {
   User,
   Role,
   UserPermission,
-  Permission,
+  Permission, Clinic,
 } from "../schemas";
 import { AppError } from "../types";
 import {
+  clinicsRepository,
   permissionsRepository,
   rolesRepository,
   usersRepository,
@@ -132,6 +133,16 @@ export const userService = {
     }
 
     return usersRepository.updateActivation(userId, isActivated);
+  },
+
+  async setClinic(userId: number, clinicId : number): Promise<User> {
+    const existingUser: User = await usersRepository.findById(userId);
+    if (!existingUser) throw new AppError("User not found", 404);
+
+    const existingClinic : Clinic = await clinicsRepository.findById(clinicId);
+    if (!existingClinic) throw new AppError("Clinic not found", 404);
+
+    return usersRepository.updateClinic(userId, clinicId);
   },
 
   async delete(userId: number): Promise<User> {
