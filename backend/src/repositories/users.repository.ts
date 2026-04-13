@@ -362,6 +362,21 @@ export const usersRepository = {
     return user;
   },
 
+  async updateClinic(userId: number, clinicId: number): Promise<User> {
+    const result = await db.query(
+        `
+        UPDATE users SET clinic_id = $1,
+            updated_at = NOW()
+            WHERE id = $2 RETURNING *
+        `, [clinicId, userId]
+    )
+
+    const user : User = result.rows[0];
+    if (!user) throw new AppError("User update failed", 400);
+
+    return user;
+  },
+
   /**
    * Request to delete a role
    * @param userId

@@ -17,9 +17,7 @@ class PermissionRepository extends BaseRepository<
    */
   async findByLabel(label: string): Promise<Permission | null> {
     const result = await db.query<Permission>(
-      `
-      SELECT * FROM permissions WHERE label=$1
-    `,
+      `SELECT * FROM ${this.table} WHERE label = $1`,
       [label],
     );
 

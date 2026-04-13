@@ -17,25 +17,8 @@ export class BaseRepository<
   /**
    * Request to get all items
    */
-  async findAll(
-    isActivated: string | undefined = undefined,
-  ): Promise<Entity[]> {
-    if (isActivated == undefined || isActivated == "undefined") {
-      return (
-        await db.query(`
-        SELECT * FROM ${this.table}
-      `)
-      ).rows;
-    }
-
-    const boolValue = isActivated == "true" ? "true" : "false";
-
-    const result = await db.query(
-      `SELECT * FROM ${this.table} WHERE is_activated = $1`,
-      [boolValue],
-    );
-
-    return result.rows;
+  async findAll(): Promise<Entity[]> {
+    return (await db.query(`SELECT * FROM ${this.table}`)).rows;
   }
 
   /**

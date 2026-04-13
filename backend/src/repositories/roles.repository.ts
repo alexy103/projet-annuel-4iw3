@@ -12,9 +12,10 @@ class RoleRepository extends BaseRepository<Role, RolePayload, RolePayload> {
    * @param label
    */
   async findByLabel(label: string): Promise<Role | null> {
-    const result = await db.query<Role>(`SELECT *FROM roles WHERE label = $1`, [
-      label,
-    ]);
+    const result = await db.query<Role>(
+      `SELECT * FROM ${this.table} WHERE label = $1`,
+      [label],
+    );
 
     return result.rows[0] || null;
   }
