@@ -1,7 +1,7 @@
 import zod from "zod";
 import { registry } from "../docs/openapi.registry";
 
-const SpeciesBaseSchema = zod
+const SpecieBaseSchema = zod
   .object({
     name: zod
       .string()
@@ -18,25 +18,25 @@ const SpeciesBaseSchema = zod
   })
   .strict();
 
-export const CreateSpeciesPayloadSchema = SpeciesBaseSchema;
-registry.register("CreateSpeciesPayload", CreateSpeciesPayloadSchema);
+export const CreateSpeciePayloadSchema = SpecieBaseSchema;
+registry.register("CreateSpeciesPayload", CreateSpeciePayloadSchema);
 
-export const UpdateSpeciesPayloadSchema = SpeciesBaseSchema.partial()
+export const UpdateSpeciePayloadSchema = SpecieBaseSchema.partial()
   .strict()
   .refine((data) => Object.keys(data).length > 0, {
     message: "At least one field must be provided for update",
   });
 
-registry.register("UpdateSpeciesPayload", UpdateSpeciesPayloadSchema);
+registry.register("UpdateSpeciesPayload", UpdateSpeciePayloadSchema);
 
-export const SpeciesSchema = SpeciesBaseSchema.extend({
+export const SpecieSchema = SpecieBaseSchema.extend({
   id: zod.number(),
   created_at: zod.date(),
   updated_at: zod.date(),
 });
 
-registry.register("Species", SpeciesSchema);
+registry.register("Specie", SpecieSchema);
 
-export type Species = zod.infer<typeof SpeciesSchema>;
-export type CreateSpeciesPayload = zod.infer<typeof CreateSpeciesPayloadSchema>;
-export type UpdateSpeciesPayload = zod.infer<typeof UpdateSpeciesPayloadSchema>;
+export type Specie = zod.infer<typeof SpecieSchema>;
+export type CreateSpeciePayload = zod.infer<typeof CreateSpeciePayloadSchema>;
+export type UpdateSpeciePayload = zod.infer<typeof UpdateSpeciePayloadSchema>;

@@ -15,8 +15,8 @@ const HeightRecordBaseSchema = zod
       .max(300)
       .positive("Height must be positive")
       .openapi({
-        description: "Height of the animal (in cm)",
-        example: 60,
+        description: "Height of the animal (in m)",
+        example: 1.50,
       }),
 
     animal_id: zod

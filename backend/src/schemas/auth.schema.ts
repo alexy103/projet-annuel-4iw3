@@ -22,6 +22,7 @@ registry.register("LoginPayload", LoginPayloadSchema);
 export const LoginSchema = zod.object({
   user_id: zod.string(),
   role_id: zod.string(),
+  clinic_id: zod.string().optional(),
   access_token: zod.string(),
   refresh_token: zod.string(),
   session_id: zod.number().optional(),

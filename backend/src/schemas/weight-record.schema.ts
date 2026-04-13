@@ -15,8 +15,8 @@ const WeightRecordBaseSchema = zod
       .max(100000)
       .positive("Weight must be positive")
       .openapi({
-        description: "Weight of the animal (in grams)",
-        example: 12000,
+        description: "Weight of the animal (in kg)",
+        example: 5.5,
       }),
 
     animal_id: zod

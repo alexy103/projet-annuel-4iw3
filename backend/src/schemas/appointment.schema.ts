@@ -56,6 +56,10 @@ const AppointmentBaseSchema = zod
         description: "Clinic ID",
         example: 1,
       }),
+    remark : zod.string().trim().min(1, "Remark is required").optional().openapi({
+        description: "Remark",
+        example: "Ear pain",
+    }),
   })
   .strict();
 

@@ -3,6 +3,15 @@ import { registry } from "../docs/openapi.registry";
 
 const AvailabilityBaseSchema = zod
   .object({
+    clinic_id: zod
+      .number()
+      .int("Clinic ID must be an integer")
+      .positive("Clinic ID must be positive")
+      .openapi({
+        description: "Linked clinic ID",
+        example: 1,
+      }),
+
     day: zod
       .string()
       .trim()

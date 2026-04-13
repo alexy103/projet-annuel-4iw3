@@ -19,22 +19,15 @@ const AppointmentReasonBaseSchema = zod
   .strict();
 
 export const CreateAppointmentReasonPayloadSchema = AppointmentReasonBaseSchema;
-registry.register(
-  "CreateAppointmentReasonPayload",
-  CreateAppointmentReasonPayloadSchema,
-);
+registry.register("CreateAppointmentReasonPayload", CreateAppointmentReasonPayloadSchema);
 
-export const UpdateAppointmentReasonPayloadSchema =
-  AppointmentReasonBaseSchema.partial()
-    .strict()
-    .refine((data) => Object.keys(data).length > 0, {
-      message: "At least one field must be provided for update",
-    });
+export const UpdateAppointmentReasonPayloadSchema = AppointmentReasonBaseSchema.partial()
+  .strict()
+  .refine((data) => Object.keys(data).length > 0, {
+    message: "At least one field must be provided for update",
+  });
 
-registry.register(
-  "UpdateAppointmentReasonPayload",
-  UpdateAppointmentReasonPayloadSchema,
-);
+registry.register("UpdateAppointmentReasonPayload", UpdateAppointmentReasonPayloadSchema);
 
 export const AppointmentReasonSchema = AppointmentReasonBaseSchema.extend({
   id: zod.number(),
@@ -45,9 +38,5 @@ export const AppointmentReasonSchema = AppointmentReasonBaseSchema.extend({
 registry.register("AppointmentReason", AppointmentReasonSchema);
 
 export type AppointmentReason = zod.infer<typeof AppointmentReasonSchema>;
-export type CreateAppointmentReasonPayload = zod.infer<
-  typeof CreateAppointmentReasonPayloadSchema
->;
-export type UpdateAppointmentReasonPayload = zod.infer<
-  typeof UpdateAppointmentReasonPayloadSchema
->;
+export type CreateAppointmentReasonPayload = zod.infer<typeof CreateAppointmentReasonPayloadSchema>;
+export type UpdateAppointmentReasonPayload = zod.infer<typeof UpdateAppointmentReasonPayloadSchema>;

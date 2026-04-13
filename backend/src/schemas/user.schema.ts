@@ -49,6 +49,9 @@ const UserBaseSchema = zod
       description: "User change password",
       example: true,
     }),
+    clinic_id: zod.number().int().positive("Vaild clinic").optional().openapi({
+        example: 2,
+    }),
   })
   .strict();
 

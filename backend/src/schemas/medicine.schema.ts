@@ -3,6 +3,8 @@ import { registry } from "../docs/openapi.registry";
 
 const MedicineBaseSchema = zod
   .object({
+    user_id: zod.number().openapi({ description: "Owner user ID", example: 1 }),
+
     brand: zod
       .string()
       .trim()
@@ -18,10 +20,11 @@ const MedicineBaseSchema = zod
   })
   .strict();
 
-export const CreateMedicinePayloadSchema = MedicineBaseSchema;
+export const CreateMedicinePayloadSchema = MedicineBaseSchema.omit({ user_id: true });
 registry.register("CreateMedicinePayload", CreateMedicinePayloadSchema);
 
-export const UpdateMedicinePayloadSchema = MedicineBaseSchema.partial()
+export const UpdateMedicinePayloadSchema = MedicineBaseSchema.omit({ user_id: true })
+  .partial()
   .strict()
   .refine((data) => Object.keys(data).length > 0, {
     message: "At least one field must be provided for update",
@@ -38,9 +41,5 @@ export const MedicineSchema = MedicineBaseSchema.extend({
 registry.register("Medicine", MedicineSchema);
 
 export type Medicine = zod.infer<typeof MedicineSchema>;
-export type CreateMedicinePayload = zod.infer<
-  typeof CreateMedicinePayloadSchema
->;
-export type UpdateMedicinePayload = zod.infer<
-  typeof UpdateMedicinePayloadSchema
->;
+export type CreateMedicinePayload = zod.infer<typeof CreateMedicinePayloadSchema>;
+export type UpdateMedicinePayload = zod.infer<typeof UpdateMedicinePayloadSchema>;

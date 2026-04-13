@@ -3,6 +3,8 @@ import { registry } from "../docs/openapi.registry";
 
 const MicroshipBaseSchema = zod
   .object({
+    user_id: zod.number().openapi({ description: "Owner user ID", example: 1 }),
+
     number: zod
       .string()
       .trim()
@@ -37,10 +39,11 @@ const MicroshipBaseSchema = zod
   })
   .strict();
 
-export const CreateMicroshipPayloadSchema = MicroshipBaseSchema;
+export const CreateMicroshipPayloadSchema = MicroshipBaseSchema.omit({ user_id: true });
 registry.register("CreateMicroshipPayload", CreateMicroshipPayloadSchema);
 
-export const UpdateMicroshipPayloadSchema = MicroshipBaseSchema.partial()
+export const UpdateMicroshipPayloadSchema = MicroshipBaseSchema.omit({ user_id: true })
+  .partial()
   .strict()
   .refine((data) => Object.keys(data).length > 0, {
     message: "At least one field must be provided for update",
@@ -57,9 +60,5 @@ export const MicroshipSchema = MicroshipBaseSchema.extend({
 registry.register("Microship", MicroshipSchema);
 
 export type Microship = zod.infer<typeof MicroshipSchema>;
-export type CreateMicroshipPayload = zod.infer<
-  typeof CreateMicroshipPayloadSchema
->;
-export type UpdateMicroshipPayload = zod.infer<
-  typeof UpdateMicroshipPayloadSchema
->;
+export type CreateMicroshipPayload = zod.infer<typeof CreateMicroshipPayloadSchema>;
+export type UpdateMicroshipPayload = zod.infer<typeof UpdateMicroshipPayloadSchema>;

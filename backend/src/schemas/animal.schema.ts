@@ -68,7 +68,7 @@ const AnimalBaseSchema = zod
       example: false,
     }),
 
-    microchip_id: zod.number().int().positive().optional().openapi({
+    microship_id: zod.number().int().positive().optional().openapi({
       description: "Microchip ID",
       example: 1,
     }),
@@ -85,7 +85,7 @@ const AnimalBaseSchema = zod
   })
   .strict();
 
-export const CreateAnimalPayloadSchema = AnimalBaseSchema.refine(
+export const CreateAnimalPayloadSchema = AnimalBaseSchema.omit({ user_id: true }).refine(
   (data) => data.birth_date <= data.adoption_date,
   {
     message: "Birth date must be before adoption date",

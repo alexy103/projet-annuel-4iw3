@@ -3,6 +3,8 @@ import { registry } from "../docs/openapi.registry";
 
 const TreatmentTypeBaseSchema = zod
   .object({
+    user_id: zod.number().openapi({ description: "Owner user ID", example: 1 }),
+
     name: zod
       .string()
       .trim()
@@ -18,23 +20,17 @@ const TreatmentTypeBaseSchema = zod
   })
   .strict();
 
-export const CreateTreatmentTypePayloadSchema = TreatmentTypeBaseSchema;
-registry.register(
-  "CreateTreatmentTypePayload",
-  CreateTreatmentTypePayloadSchema,
-);
+export const CreateTreatmentTypePayloadSchema = TreatmentTypeBaseSchema.omit({ user_id: true });
+registry.register("CreateTreatmentTypePayload", CreateTreatmentTypePayloadSchema);
 
-export const UpdateTreatmentTypePayloadSchema =
-  TreatmentTypeBaseSchema.partial()
-    .strict()
-    .refine((data) => Object.keys(data).length > 0, {
-      message: "At least one field must be provided for update",
-    });
+export const UpdateTreatmentTypePayloadSchema = TreatmentTypeBaseSchema.omit({ user_id: true })
+  .partial()
+  .strict()
+  .refine((data) => Object.keys(data).length > 0, {
+    message: "At least one field must be provided for update",
+  });
 
-registry.register(
-  "UpdateTreatmentTypePayload",
-  UpdateTreatmentTypePayloadSchema,
-);
+registry.register("UpdateTreatmentTypePayload", UpdateTreatmentTypePayloadSchema);
 
 export const TreatmentTypeSchema = TreatmentTypeBaseSchema.extend({
   id: zod.number(),
@@ -45,9 +41,5 @@ export const TreatmentTypeSchema = TreatmentTypeBaseSchema.extend({
 registry.register("TreatmentType", TreatmentTypeSchema);
 
 export type TreatmentType = zod.infer<typeof TreatmentTypeSchema>;
-export type CreateTreatmentTypePayload = zod.infer<
-  typeof CreateTreatmentTypePayloadSchema
->;
-export type UpdateTreatmentTypePayload = zod.infer<
-  typeof UpdateTreatmentTypePayloadSchema
->;
+export type CreateTreatmentTypePayload = zod.infer<typeof CreateTreatmentTypePayloadSchema>;
+export type UpdateTreatmentTypePayload = zod.infer<typeof UpdateTreatmentTypePayloadSchema>;

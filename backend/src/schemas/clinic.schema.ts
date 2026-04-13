@@ -3,6 +3,18 @@ import { registry } from "../docs/openapi.registry";
 
 const ClinicBaseSchema = zod
   .object({
+    name: zod
+      .string()
+      .trim()
+      .min(1, "Name is required")
+      .max(255, "Name too long (max 255)")
+      .refine((name: string): boolean => name !== "", "Name cannot be empty")
+      .openapi({
+          description: "Clinic name",
+          minLength: 1,
+          maxLength: 255,
+          example: "Clinique Vétérinaire du Parc",
+      }),
     address: zod
       .string()
       .trim()
@@ -50,14 +62,6 @@ const ClinicBaseSchema = zod
         example: "0123456789",
       }),
 
-    availability_id: zod
-      .number()
-      .int("Availability ID must be an integer")
-      .positive("Availability ID must be positive")
-      .openapi({
-        description: "Linked availability ID",
-        example: 1,
-      }),
   })
   .strict();
 
