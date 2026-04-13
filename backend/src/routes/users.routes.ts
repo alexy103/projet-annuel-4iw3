@@ -1,12 +1,13 @@
 import { Router } from "express";
 import { requireApiKey, requireAuth, validateSchema } from "../middlewares";
-import {createPermissionToUser,
+import {
+  createPermissionToUser,
   createUser, deletePermissionFromUser,
   deleteUser, getPermissionsByUserId,
   getUserById,
   getUsers,
   toggleUserActivation,
-  updateUser,
+  updateUser, updateUserClinicId,
   updateUserEmailVerified
 } from "../controllers";
 import { UpdateUserPayloadSchema, CreateUserPayloadSchema } from "../schemas";
@@ -46,6 +47,8 @@ usersRouter.patch(
   requireAuth("admin"),
   toggleUserActivation,
 );
+
+usersRouter.patch("/:userId/clinic", requireApiKey, requireAuth("admin"), updateUserClinicId);
 
 usersRouter.delete("/:userId", requireApiKey, requireAuth("admin"), deleteUser);
 
