@@ -147,6 +147,39 @@ registry.registerPath({
 });
 
 registry.registerPath({
+  method: "patch",
+  security: [{ ApiKeyAuth: [] }, { BearerAuth: [] }],
+  path: "/users/{userId}/clinic",
+  tags: ["Users"],
+  summary: "Attribute clinic to user",
+  request: {
+    params: zod.object({
+      userId: zod.string(),
+    }),
+    body: {
+      content: {
+        "application/json": {
+          schema: zod.object({
+            clinic_id: zod.number().openapi({
+              example: 1,
+            }),
+          }),
+        },
+      },
+    },
+  },
+  responses: {
+    200: JsonResponse(UserSchema, "User activation updated"),
+    400: BadRequest,
+    401: UnauthorizedResponse,
+    403: ForbiddenResponse,
+    404: NotFoundResponse,
+    409: ConflictResponse,
+    500: ServerErrorResponse,
+  },
+});
+
+registry.registerPath({
   method: "delete",
   security: [{ ApiKeyAuth: [] }, { BearerAuth: [] }],
   path: "/users/{userId}",
