@@ -29,7 +29,7 @@ usersRouter.post(
 usersRouter.put(
   "/:userId",
   requireApiKey,
-  requireAuth("admin"),
+  requireAuth(),
   validateSchema(UpdateUserPayloadSchema),
   updateUser,
 );
@@ -48,7 +48,7 @@ usersRouter.patch(
   toggleUserActivation,
 );
 
-usersRouter.patch("/:userId/clinic", requireApiKey, requireAuth("admin"), updateUserClinicId);
+usersRouter.patch("/:userId/clinic", requireApiKey, requireAuth("admin", "clinic"), updateUserClinicId);
 
 usersRouter.delete("/:userId", requireApiKey, requireAuth("admin"), deleteUser);
 
