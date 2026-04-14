@@ -56,7 +56,9 @@ registry.registerPath({
   request: {
     body: {
       content: {
-        "application/json": { schema: CreateUsers2FAPayloadSchema },
+        "application/json": {
+          schema: CreateUsers2FAPayloadSchema,
+        },
       },
     },
   },

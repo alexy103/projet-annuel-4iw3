@@ -1,41 +1,41 @@
 import zod from "zod";
 import { registry } from "../docs/openapi.registry";
 
-const Users2FABaseSchema = zod
-  .object({
-    user_id: zod
-      .number()
-      .int("User ID must be an integer")
-      .positive("User ID must be positive")
-      .openapi({
-        description: "User ID linked to 2FA",
-        example: 1,
-      }),
-
-    totp_secret: zod
-      .string()
-      .trim()
-      .min(1, "TOTP secret cannot be empty")
-      .optional()
-      .openapi({
-        description: "TOTP secret for 2FA",
-        example: "JBSWY3DPEHPK3PXP",
-      }),
-
-    is_enabled: zod.boolean().default(false).openapi({
-      description: "Whether 2FA is enabled",
-      example: false,
+const Users2FAPayloadFieldsSchema = zod.object({
+  totp_secret: zod
+    .string()
+    .trim()
+    .min(1, "TOTP secret cannot be empty")
+    .optional()
+    .openapi({
+      description: "TOTP secret for 2FA",
+      example: "JBSWY3DPEHPK3PXP",
     }),
 
-    recovery_codes: zod
-      .unknown()
-      .optional()
-      .openapi({
-        description: "Recovery codes for 2FA",
-        example: ["code1", "code2", "code3"],
-      }),
-  })
-  .strict();
+  is_enabled: zod.boolean().default(false).openapi({
+    description: "Whether 2FA is enabled",
+    example: false,
+  }),
+
+  recovery_codes: zod
+    .unknown()
+    .optional()
+    .openapi({
+      description: "Recovery codes for 2FA",
+      example: ["code1", "code2", "code3"],
+    }),
+});
+
+const Users2FABaseSchema = Users2FAPayloadFieldsSchema.extend({
+  user_id: zod
+    .number()
+    .int("User ID must be an integer")
+    .positive("User ID must be positive")
+    .openapi({
+      description: "User ID linked to 2FA",
+      example: 1,
+    }),
+}).strict();
 
 export const CreateUsers2FAPayloadSchema = Users2FABaseSchema.refine(
   (data) => {
@@ -50,7 +50,8 @@ export const CreateUsers2FAPayloadSchema = Users2FABaseSchema.refine(
   },
 );
 
-registry.register("CreateUsers2FAPayload", CreateUsers2FAPayloadSchema);
+const CreateUsers2FAPayloadDocSchema = Users2FAPayloadFieldsSchema.strict();
+registry.register("CreateUsers2FAPayload", CreateUsers2FAPayloadDocSchema);
 
 export const UpdateUsers2FAPayloadSchema = Users2FABaseSchema.partial()
   .strict()
@@ -70,7 +71,10 @@ export const UpdateUsers2FAPayloadSchema = Users2FABaseSchema.partial()
     },
   );
 
-registry.register("UpdateUsers2FAPayload", UpdateUsers2FAPayloadSchema);
+// Schéma docs OpenAPI (sans refine)
+const UpdateUsers2FAPayloadDocSchema =
+  Users2FAPayloadFieldsSchema.partial().strict();
+registry.register("UpdateUsers2FAPayload", UpdateUsers2FAPayloadDocSchema);
 
 export const Users2FASchema = Users2FABaseSchema.extend({
   id: zod.number(),
