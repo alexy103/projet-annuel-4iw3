@@ -1,6 +1,6 @@
 import { db } from "../config";
 import { AppError } from "../types";
-import { TreatmentReminder, CreateTreatmentReminderPayload, UpdateTreatmentReminderPayload } from "../schemas";
+import { TreatmentReminder, CreateTreatmentReminderPayload } from "../schemas";
 
 const TABLE_NAME = "treatment_reminders";
 
@@ -9,7 +9,9 @@ export const treatmentRemindersRepository = {
    * Request to create a treatment reminder
    * @param data
    */
-  async create(data: CreateTreatmentReminderPayload): Promise<TreatmentReminder> {
+  async create(
+    data: CreateTreatmentReminderPayload,
+  ): Promise<TreatmentReminder> {
     const result = await db.query<TreatmentReminder>(
       `INSERT INTO ${TABLE_NAME} (treatment_id, reminder_frequency_id, amount) VALUES ($1, $2, $3) RETURNING *`,
       [data.treatment_id, data.reminder_frequency_id, data.amount],
@@ -39,7 +41,9 @@ export const treatmentRemindersRepository = {
    * Request to get all reminders by reminder frequency id
    * @param reminderFrequencyId
    */
-  async findByReminderFrequencyId(reminderFrequencyId: number): Promise<TreatmentReminder[]> {
+  async findByReminderFrequencyId(
+    reminderFrequencyId: number,
+  ): Promise<TreatmentReminder[]> {
     const result = await db.query<TreatmentReminder>(
       `SELECT * FROM ${TABLE_NAME} WHERE reminder_frequency_id = $1`,
       [reminderFrequencyId],
@@ -82,7 +86,9 @@ export const treatmentRemindersRepository = {
    * Request to count reminders by reminder frequency
    * @param reminderFrequencyId
    */
-  async countByReminderFrequencyId(reminderFrequencyId: number): Promise<number> {
+  async countByReminderFrequencyId(
+    reminderFrequencyId: number,
+  ): Promise<number> {
     const result = await db.query(
       `SELECT COUNT(*) as count FROM ${TABLE_NAME} WHERE reminder_frequency_id = $1`,
       [reminderFrequencyId],

@@ -1,10 +1,18 @@
 import { db } from "../config";
-import { TreatmentType, CreateTreatmentTypePayload, UpdateTreatmentTypePayload } from "../schemas";
+import {
+  TreatmentType,
+  CreateTreatmentTypePayload,
+  UpdateTreatmentTypePayload,
+} from "../schemas";
 import { BaseRepository } from "./base.repository";
 
-class TreatmentTypeRepository extends BaseRepository<TreatmentType, CreateTreatmentTypePayload, UpdateTreatmentTypePayload> {
+class TreatmentTypeRepository extends BaseRepository<
+  TreatmentType,
+  CreateTreatmentTypePayload,
+  UpdateTreatmentTypePayload
+> {
   constructor() {
-    super("treatment_types", "TreatmentType");
+    super("treatment_types", "Treatment Type");
   }
 
   /**
@@ -41,7 +49,10 @@ class TreatmentTypeRepository extends BaseRepository<TreatmentType, CreateTreatm
    * @param name
    * @param userId
    */
-  async findExactByName(name: string, userId: number): Promise<TreatmentType | null> {
+  async findExactByName(
+    name: string,
+    userId: number,
+  ): Promise<TreatmentType | null> {
     const result = await db.query<TreatmentType>(
       `SELECT * FROM ${this.table} WHERE LOWER(name) = LOWER($1) AND user_id = $2 LIMIT 1`,
       [name, userId],
