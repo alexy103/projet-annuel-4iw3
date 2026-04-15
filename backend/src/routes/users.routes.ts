@@ -1,0 +1,74 @@
+import { Router } from "express";
+import { requireApiKey, requireAuth, validateSchema } from "../middlewares";
+import {
+  createPermissionToUser,
+  createUser, deletePermissionFromUser,
+  deleteUser, getPermissionsByUserId,
+  getUserById,
+  getUsers,
+  toggleUserActivation,
+  updateUser, updateUserClinicId,
+  updateUserEmailVerified
+} from "../controllers";
+import { UpdateUserPayloadSchema, CreateUserPayloadSchema } from "../schemas";
+
+export const usersRouter: Router = Router();
+
+usersRouter.get("/", requireApiKey, requireAuth("admin"), getUsers);
+
+usersRouter.get("/:userId", requireApiKey, requireAuth("admin"), getUserById);
+
+usersRouter.post(
+  "/",
+  requireApiKey,
+  requireAuth("admin"),
+  validateSchema(CreateUserPayloadSchema),
+  createUser,
+);
+
+usersRouter.put(
+  "/:userId",
+  requireApiKey,
+  requireAuth(),
+  validateSchema(UpdateUserPayloadSchema),
+  updateUser,
+);
+
+usersRouter.patch(
+  "/:userId/mail",
+  requireApiKey,
+  requireAuth("admin"),
+  updateUserEmailVerified,
+);
+
+usersRouter.patch(
+  "/:userId/active",
+  requireApiKey,
+  requireAuth("admin"),
+  toggleUserActivation,
+);
+
+usersRouter.patch("/:userId/clinic", requireApiKey, requireAuth("admin", "clinic"), updateUserClinicId);
+
+usersRouter.delete("/:userId", requireApiKey, requireAuth("admin"), deleteUser);
+
+usersRouter.get(
+  "/:userId/permissions",
+  requireApiKey,
+  requireAuth("admin"),
+  getPermissionsByUserId,
+);
+
+usersRouter.post(
+  "/permissions",
+  requireApiKey,
+  requireAuth("admin"),
+  createPermissionToUser,
+);
+
+usersRouter.delete(
+  "/:userId/permissions/:permissionId",
+  requireApiKey,
+  requireAuth("admin"),
+  deletePermissionFromUser,
+);
