@@ -129,7 +129,11 @@ const showInfo = ref(false);
     <p>Date de naissance : 25/12/2020</p>
     <p>Date d’adoption : 25/12/2021</p>
 
-    <button class="button mt-4 w-full border shadow">
+    <button class="button-sm mx-auto mt-4 border shadow">
+      <Icon
+        name="material-symbols:add-2-rounded"
+        class="text-red size-6 rotate-45"
+      />
       Supprimer cet animal
     </button>
   </BasePopup>

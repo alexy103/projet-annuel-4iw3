@@ -28,4 +28,8 @@
   .button {
     @apply flex items-center gap-1 rounded-full px-2 py-1 text-xs font-bold;
   }
+
+  .button-sm {
+    @apply flex items-center gap-1 rounded-full px-2 text-xs font-bold;
+  }
 }

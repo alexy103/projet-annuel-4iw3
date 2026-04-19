@@ -60,7 +60,7 @@ onBeforeUnmount(() => {
     class="pointer-events-none fixed inset-0 z-50 flex items-end"
   >
     <div
-      class="absolute inset-0 bg-white/10 backdrop-blur-sm transition-opacity duration-250"
+      class="absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity duration-250"
       :class="[
         isVisible
           ? 'pointer-events-auto opacity-100'
@@ -71,10 +71,8 @@ onBeforeUnmount(() => {
 
     <div
       class="relative mx-auto mb-4 w-4/5 rounded-2xl bg-white p-4 transition-transform duration-500"
-      :class="isVisible ? 'translate-y-0' : 'translate-y-full'"
+      :class="isVisible ? 'translate-y-0' : 'translate-y-[calc(100%+1rem)]'"
     >
-      <button class="absolute top-3 right-3" @click="close">✕</button>
-
       <slot></slot>
     </div>
   </div>
