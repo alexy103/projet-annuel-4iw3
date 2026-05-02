@@ -92,26 +92,34 @@ const showInfo = ref(false);
       </div>
     </BaseSection>
 
-    <BaseSection title="Carnet de santé" color="blue">
-      <div class="grid grid-cols-2 gap-4">
-        <AnimalHealthGraph type="weight" />
-        <AnimalHealthData type="weight" />
-        <AnimalHealthData type="size" />
-        <AnimalHealthGraph type="size" />
-      </div>
-    </BaseSection>
+    <div class="md:flex md:items-stretch md:gap-16">
+      <BaseSection title="Carnet de santé" color="blue">
+        <div class="grid grid-cols-2 gap-4 md:w-fit">
+          <AnimalHealthGraph type="weight" />
+          <AnimalHealthData type="weight" />
+          <AnimalHealthData type="size" />
+          <AnimalHealthGraph type="size" />
+        </div>
+      </BaseSection>
 
-    <BaseSection title="Évolution" action="Nouvelle mesure" plus color="green">
-      <div>
-        <div class="bg-grey-500 mb-2 h-40 w-full rounded-xl"></div>
+      <BaseSection
+        title="Évolution"
+        action="Nouvelle mesure"
+        plus
+        color="green"
+        class="md:flex md:flex-1 md:flex-col md:items-stretch"
+      >
+        <div class="md:flex md:flex-1 md:flex-col md:items-stretch">
+          <div class="bg-grey-500 mb-2 h-40 w-full rounded-xl md:flex-1"></div>
 
-        <BaseToggle
-          class="mx-auto"
-          left-label="Nouvelle mesure"
-          right-label="Ancienne mesure"
-        />
-      </div>
-    </BaseSection>
+          <BaseToggle
+            class="mx-auto"
+            left-label="Nouvelle mesure"
+            right-label="Ancienne mesure"
+          />
+        </div>
+      </BaseSection>
+    </div>
 
     <BaseSection title="Images" color="blue">
       <div class="grid grid-cols-2 gap-3">
