@@ -1,0 +1,35 @@
+@import "tailwindcss";
+@theme {
+  --font-jost: "Jost", sans-serif;
+  --font-alt: "Luckiest Guy";
+  --font-alt: "Titan One";
+  --default-font-family: var(--font-jost);
+
+  --color-background: #fafafa;
+  --color-grey-500: #c7c7c7;
+  --color-grey-700: #727272;
+  --color-green-light: #cce8dd;
+  --color-green: #15d98b;
+  --color-blue: #31c6d0;
+  --color-blue-dark: #0e4bbd;
+  --color-black: #1e1e1e;
+  --color-red: #ee0101;
+  --color-pink: #ff91e2;
+}
+@layer utilities {
+  .shadow {
+    @apply shadow-[2px_2px_0_var(--color-black)];
+  }
+
+  .shadow-lg {
+    @apply shadow-[3px_3px_0_var(--color-black)];
+  }
+
+  .button {
+    @apply flex items-center gap-1 rounded-full px-2 py-1 text-xs font-bold;
+  }
+
+  .button-sm {
+    @apply flex items-center gap-1 rounded-full px-2 text-xs font-bold;
+  }
+}
