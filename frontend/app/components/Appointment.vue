@@ -1,5 +1,5 @@
 <template>
-  <article class="bg-green-light relative w-45 shrink-0 rounded-xl p-3">
+  <article class="relative w-45 shrink-0 rounded-xl bg-green-300 p-3">
     <Icon
       name="material-symbols:arrow-right-alt-rounded"
       class="absolute top-3 right-2 size-6"

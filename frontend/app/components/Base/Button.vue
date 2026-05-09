@@ -1,6 +1,6 @@
 <template>
   <div>
-    <button class="button bg-green text-background shadow">
+    <button class="button text-background bg-green-500 shadow">
       <slot> </slot>
     </button>
   </div>

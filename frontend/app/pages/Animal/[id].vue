@@ -1,5 +1,11 @@
 <script setup lang="ts">
 const showInfo = ref(false);
+const showQr = ref(false);
+const showEdit = ref(false);
+
+const submitEdit = () => {
+  console.log("submit");
+};
 </script>
 <template>
   <div>
@@ -15,7 +21,8 @@ const showInfo = ref(false);
         <img src="/kyky.jpg" alt="" class="size-50 rounded-full object-cover" />
         <ul>
           <li
-            class="bg-green-light absolute top-0 -right-3 flex w-fit cursor-pointer items-center justify-center rounded-full p-1"
+            class="absolute top-0 -right-3 flex w-fit cursor-pointer items-center justify-center rounded-full bg-green-300 p-1"
+            @click="showQr = true"
           >
             <Icon
               name="material-symbols:qr-code-rounded"
@@ -23,7 +30,7 @@ const showInfo = ref(false);
             />
           </li>
           <li
-            class="bg-green-light absolute -right-3 bottom-0 flex w-fit cursor-pointer items-center justify-center rounded-full p-1"
+            class="absolute -right-3 bottom-0 flex w-fit cursor-pointer items-center justify-center rounded-full bg-green-300 p-1"
             @click="showInfo = true"
           >
             <Icon
@@ -32,7 +39,8 @@ const showInfo = ref(false);
             />
           </li>
           <li
-            class="bg-green-light absolute bottom-0 -left-3 flex w-fit cursor-pointer items-center justify-center rounded-full p-1"
+            class="absolute bottom-0 -left-3 flex w-fit cursor-pointer items-center justify-center rounded-full bg-green-300 p-1"
+            @click="showEdit = true"
           >
             <Icon
               name="material-symbols:edit-outline-rounded"
@@ -132,17 +140,101 @@ const showInfo = ref(false);
   </div>
 
   <BasePopup v-model="showInfo">
-    <h2 class="mb-2 text-center font-bold">Informations supplémentaires</h2>
+    <div class="w-240">
+      <h2 class="mb-2 text-center font-bold">Informations supplémentaires</h2>
 
-    <p>Date de naissance : 25/12/2020</p>
-    <p>Date d’adoption : 25/12/2021</p>
+      <p>Date de naissance : 25/12/2020</p>
+      <p>Date d’adoption : 25/12/2021</p>
 
-    <button class="button-sm mx-auto mt-4 border shadow">
-      <Icon
-        name="material-symbols:add-2-rounded"
-        class="text-red size-6 rotate-45"
-      />
-      Supprimer cet animal
-    </button>
+      <button class="button-sm mx-auto mt-4 border shadow">
+        <Icon
+          name="material-symbols:add-2-rounded"
+          class="text-red size-6 rotate-45"
+        />
+        Supprimer cet animal
+      </button>
+    </div>
+  </BasePopup>
+
+  <BasePopup v-model="showQr">
+    <div class="flex w-full items-center justify-center">
+      <div class="size-64 lg:size-80">
+        <Qrcode value="https://nuxt.com/modules/qrcode" />
+      </div>
+    </div>
+  </BasePopup>
+
+  <BasePopup v-model="showEdit">
+    <form class="w-240" @submit.prevent="submitEdit">
+      <h2 class="mb-2 text-center font-bold">Modifier les informations</h2>
+
+      <div class="flex flex-col gap-4">
+        <div class="flex flex-col gap-1">
+          <label for="name" class="text-sm font-medium">Nom</label>
+          <input
+            id="name"
+            type="text"
+            value="Kyky"
+            class="border-grey-300 rounded-lg border bg-white px-3 py-2 focus:border-green-700 focus:outline-none"
+          />
+        </div>
+
+        <div class="flex flex-col gap-1">
+          <label for="species" class="text-sm font-medium">Espèce</label>
+          <select
+            id="species"
+            class="border-grey-300 rounded-lg border bg-white px-3 py-2 focus:border-green-700 focus:outline-none"
+          >
+            <option value="cat" selected>Chat</option>
+            <option value="dog">Chien</option>
+          </select>
+        </div>
+
+        <div class="flex flex-col gap-1">
+          <label for="breed" class="text-sm font-medium">Race</label>
+          <select
+            id="breed"
+            class="border-grey-300 rounded-lg border bg-white px-3 py-2 focus:border-green-700 focus:outline-none"
+          >
+            <option value="european-shorthair" selected>
+              European shorthair
+            </option>
+            <option value="maine-coon">Maine Coon</option>
+          </select>
+        </div>
+
+        <!-- birth date -->
+        <div class="flex flex-col gap-1">
+          <label for="birth" class="text-sm font-medium">
+            Date de naissance
+          </label>
+          <input
+            id="birth"
+            type="date"
+            class="border-grey-300 rounded-lg border bg-white px-3 py-2 focus:border-green-700 focus:outline-none"
+            value="2020-07-15"
+          />
+        </div>
+
+        <div class="flex flex-col gap-1">
+          <label for="picture" class="text-sm font-medium">
+            Nouvelle photo
+          </label>
+          <input
+            id="picture"
+            type="file"
+            accept="image/*"
+            class="border-grey-300 rounded-lg border bg-white px-3 py-2 focus:border-green-700 focus:outline-none"
+          />
+        </div>
+
+        <button
+          type="submit"
+          class="cursor-pointer rounded-lg bg-green-700 px-4 py-2 font-medium text-white transition-colors hover:bg-green-900"
+        >
+          Enregistrer
+        </button>
+      </div>
+    </form>
   </BasePopup>
 </template>

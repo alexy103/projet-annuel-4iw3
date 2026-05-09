@@ -1,7 +1,7 @@
 <template>
   <div class="bg-grey-500 relative w-fit rounded-full shadow">
     <div
-      class="bg-green absolute inset-y-0 rounded-full transition-all duration-300 ease-in-out"
+      class="absolute inset-y-0 rounded-full bg-green-500 transition-all duration-300 ease-in-out"
       :class="selected === 'Taille' ? 'left-0 w-1/2' : 'left-1/2 w-1/2'"
     ></div>
 

@@ -25,7 +25,7 @@ defineProps({
       <h2
         class="relative font-bold after:absolute after:-bottom-px after:left-0 after:h-1 after:w-10 after:rounded-full after:content-['']"
         :class="{
-          'after:bg-green': color === 'green',
+          'after:bg-green-500': color === 'green',
           'after:bg-blue': color === 'blue',
         }"
       >
@@ -42,7 +42,7 @@ defineProps({
       v-else
       class="relative mb-4 font-bold after:absolute after:-bottom-px after:left-0 after:h-1 after:w-10 after:rounded-full after:content-['']"
       :class="{
-        'after:bg-green': color === 'green',
+        'after:bg-green-500': color === 'green',
         'after:bg-blue': color === 'blue',
       }"
     >

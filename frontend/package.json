@@ -22,6 +22,7 @@
     "@iconify-json/material-symbols": "^1.2.67",
     "@iconify-json/solar": "^1.2.5",
     "@iconify-json/uil": "^1.2.3",
+    "nuxt-qrcode": "^0.4.10",
     "prettier": "^3.8.1",
     "prettier-plugin-tailwindcss": "^0.7.2",
     "typescript": "^6.0.2"
