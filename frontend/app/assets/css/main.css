@@ -8,8 +8,10 @@
   --color-background: #fafafa;
   --color-grey-500: #c7c7c7;
   --color-grey-700: #727272;
-  --color-green-light: #cce8dd;
-  --color-green: #15d98b;
+  --color-green-300: #cce8dd;
+  --color-green-500: #15d98b;
+  --color-green-700: #0e7a5d;
+  --color-green-900: #0a4f3d;
   --color-blue: #31c6d0;
   --color-blue-dark: #0e4bbd;
   --color-black: #1e1e1e;
@@ -31,5 +33,9 @@
 
   .button-sm {
     @apply flex items-center gap-1 rounded-full px-2 text-xs font-bold;
+  }
+
+  .input {
+    @apply rounded-full border border-black px-3 py-2;
   }
 }

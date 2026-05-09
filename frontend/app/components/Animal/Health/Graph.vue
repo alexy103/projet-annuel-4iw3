@@ -8,7 +8,7 @@ const config = {
     position: "right-1 bottom-1",
   },
   size: {
-    bg: "bg-green",
+    bg: "bg-green-500",
     label: "Taille",
     position: "top-1 left-1",
   },

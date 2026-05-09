@@ -70,7 +70,7 @@ onBeforeUnmount(() => {
     ></div>
 
     <div
-      class="relative mx-auto mb-4 w-4/5 rounded-2xl bg-white p-4 transition-transform duration-500"
+      class="pointer-events-auto relative mx-auto mb-4 w-fit rounded-2xl bg-white p-4 transition-transform duration-500"
       :class="isVisible ? 'translate-y-0' : 'translate-y-[calc(100%+1rem)]'"
     >
       <slot></slot>
