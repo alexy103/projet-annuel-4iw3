@@ -49,54 +49,15 @@ const submitEdit = () => {
           </li>
         </ul>
       </div>
-      <div class="hidden">
-        <div class="flex items-center">
-          <h1>Scooby</h1>
-          <Icon
-            name="material-symbols:male-rounded"
-            class="text-blue-dark size-6"
-          />
-        </div>
-        <span>Labrador</span>
-      </div>
       <div class="flex items-center gap-1">
         <Icon name="material-symbols:calendar-today-rounded" class="size-6" />
         <p>4 ans et 10 mois</p>
       </div>
-      <!-- <ul>
-        <li
-          class="bg-green-light flex w-fit cursor-pointer items-center justify-center rounded-full p-1"
-        >
-          <Icon
-            name="material-symbols:qr-code-rounded"
-            class="size-6 text-black"
-          />
-        </li>
-        <li
-          class="bg-green-light flex w-fit cursor-pointer items-center justify-center rounded-full p-1"
-        >
-          <Icon
-            name="material-symbols:info-i-rounded"
-            class="size-6 text-black"
-          />
-        </li>
-        <li
-          class="bg-green-light flex w-fit cursor-pointer items-center justify-center rounded-full p-1"
-        >
-          <Icon
-            name="material-symbols:edit-outline-rounded"
-            class="size-6 text-black"
-          />
-        </li>
-      </ul> -->
     </figure>
 
     <BaseSection title="À venir" action="Tout voir" color="green">
       <div class="-mx-4 flex gap-2 overflow-x-auto px-4">
-        <Appointment />
-        <Appointment />
-        <Appointment />
-        <Appointment />
+        <Appointment v-for="i in 4" />
       </div>
     </BaseSection>
 
@@ -131,10 +92,7 @@ const submitEdit = () => {
 
     <BaseSection title="Images" color="blue">
       <div class="grid grid-cols-2 gap-3">
-        <img src="/kyky2.jpg" alt="" />
-        <img src="/kyky2.jpg" alt="" />
-        <img src="/kyky2.jpg" alt="" />
-        <img src="/kyky2.jpg" alt="" />
+        <img v-for="i in 4" src="/kyky2.jpg" alt="" />
       </div>
     </BaseSection>
   </div>
