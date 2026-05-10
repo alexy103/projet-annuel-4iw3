@@ -3,7 +3,7 @@ defineProps<{ type: "weight" | "size" }>();
 
 const config = {
   weight: {
-    bg: "bg-blue",
+    bg: "bg-blue-500",
     label: "Poids",
     position: "right-1 bottom-1",
   },

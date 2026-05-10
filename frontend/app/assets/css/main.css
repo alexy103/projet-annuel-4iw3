@@ -12,8 +12,8 @@
   --color-green-500: #15d98b;
   --color-green-700: #0e7a5d;
   --color-green-900: #0a4f3d;
-  --color-blue: #31c6d0;
-  --color-blue-dark: #0e4bbd;
+  --color-blue-500: #31c6d0;
+  --color-blue-700: #0e4bbd;
   --color-black: #1e1e1e;
   --color-red: #ee0101;
   --color-pink: #ff91e2;
@@ -28,11 +28,11 @@
   }
 
   .button {
-    @apply flex items-center gap-1 rounded-full px-2 py-1 text-xs font-bold;
+    @apply flex cursor-pointer items-center gap-1 rounded-full px-2 py-1 text-xs font-bold;
   }
 
   .button-sm {
-    @apply flex items-center gap-1 rounded-full px-2 text-xs font-bold;
+    @apply flex cursor-pointer items-center gap-1 rounded-full px-2 text-xs font-bold;
   }
 
   .input {

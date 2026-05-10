@@ -6,6 +6,10 @@ const props = defineProps({
     type: Boolean,
     required: true,
   },
+  fit: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const emit = defineEmits(["update:modelValue"]);
@@ -70,8 +74,11 @@ onBeforeUnmount(() => {
     ></div>
 
     <div
-      class="pointer-events-auto relative mx-auto mb-4 w-fit rounded-2xl bg-white p-4 transition-transform duration-500"
-      :class="isVisible ? 'translate-y-0' : 'translate-y-[calc(100%+1rem)]'"
+      class="pointer-events-auto relative mx-auto mb-4 rounded-2xl bg-white p-4 transition-transform duration-500"
+      :class="[
+        isVisible ? 'translate-y-0' : 'translate-y-[calc(100%+1rem)]',
+        fit ? 'w-fit' : 'w-72 lg:w-240',
+      ]"
     >
       <slot></slot>
     </div>

@@ -35,6 +35,13 @@ const nightMode = ref(false);
       </div>
     </BaseSection>
 
-    <BaseButton class="flex justify-center">Enregistrer</BaseButton>
+    <div class="flex items-center justify-center gap-4">
+      <BaseButton class="flex justify-center">Enregistrer</BaseButton>
+      <NuxtLink to="/login">
+        <BaseButton class="flex justify-center" color="white"
+          >Déconnexion</BaseButton
+        >
+      </NuxtLink>
+    </div>
   </div>
 </template>
