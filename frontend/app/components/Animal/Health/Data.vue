@@ -1,7 +1,7 @@
 <script setup lang="ts">
 const props = defineProps<{ type: "weight" | "size" }>();
 
-const color = props.type === "weight" ? "text-blue" : "text-green-500";
+const color = props.type === "weight" ? "text-blue-500" : "text-green-500";
 const label = props.type === "weight" ? "kg" : "cm";
 </script>
 
