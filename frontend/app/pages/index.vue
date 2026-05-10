@@ -3,7 +3,7 @@
 <template>
   <div>
     <h1 class="mt-2 mb-4 text-2xl font-bold">Bienvenue, John !</h1>
-    <BaseSection title="À venir" action="Tout voir" color="green">
+    <BaseSection title="À venir" action="Tout voir">
       <div class="-mx-4 flex gap-2 overflow-x-auto px-4">
         <Appointment v-for="i in 4" />
       </div>

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 const showNewAnimalForm = ref(false);
+const id = 1;
 </script>
 
 <template>
@@ -9,7 +10,9 @@ const showNewAnimalForm = ref(false);
         <NuxtLink to="/" class="absolute left-1/2 -translate-x-1/2 text-2xl">
           <h1>PawTracker</h1>
         </NuxtLink>
-        <Icon name="solar:user-outline" class="size-8 text-black" />
+        <NuxtLink :to="'/profile/' + id">
+          <Icon name="solar:user-outline" class="size-8 text-black" />
+        </NuxtLink>
         <Icon
           name="solar:calendar-add-outline"
           class="ml-2 size-8 text-black"
