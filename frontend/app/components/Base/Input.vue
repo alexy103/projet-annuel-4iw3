@@ -17,7 +17,7 @@ const inputValue = ref(props.value || "");
     <input
       v-model="inputValue"
       :placeholder="placeholder"
-      class="input w-full font-normal shadow placeholder:text-gray-400 focus:outline-none"
+      class="input bg-background w-full font-normal shadow placeholder:text-gray-400 focus:outline-none"
       :class="inputValue ? 'text-black' : 'text-gray-400'"
       :type="type || 'text'"
     />
