@@ -13,7 +13,7 @@ const submitEdit = () => {
       <div class="mb-2 flex flex-col items-center">
         <div class="flex items-center">
           <h1 class="text-2xl font-bold">Kyky</h1>
-          <Icon name="material-symbols:male" class="text-blue-dark size-6" />
+          <Icon name="material-symbols:male" class="size-6 text-blue-700" />
         </div>
         <span class="text-grey-700 italic">European shorthair</span>
       </div>
@@ -97,32 +97,30 @@ const submitEdit = () => {
   </div>
 
   <BasePopup v-model="showInfo">
-    <div class="lg:w-240">
-      <h2 class="mb-2 text-center font-bold">Informations supplémentaires</h2>
+    <h2 class="mb-2 text-center font-bold">Informations supplémentaires</h2>
 
-      <p>Date de naissance : 25/12/2020</p>
-      <p>Date d’adoption : 25/12/2021</p>
+    <p>Date de naissance : 25/12/2020</p>
+    <p>Date d'adoption : 25/12/2021</p>
 
-      <button class="button-sm mx-auto mt-4 border shadow">
-        <Icon
-          name="material-symbols:add-2-rounded"
-          class="text-red size-6 rotate-45"
-        />
-        Supprimer cet animal
-      </button>
-    </div>
+    <button class="button-sm mx-auto mt-4 border shadow">
+      <Icon
+        name="material-symbols:add-2-rounded"
+        class="text-red size-6 rotate-45"
+      />
+      Supprimer cet animal
+    </button>
   </BasePopup>
 
-  <BasePopup v-model="showQr">
+  <BasePopup v-model="showQr" fit>
     <div class="flex w-full items-center justify-center">
-      <div class="size-64 lg:size-80">
+      <div class="size-64 h-fit lg:size-80">
         <Qrcode value="https://nuxt.com/modules/qrcode" />
       </div>
     </div>
   </BasePopup>
 
   <BasePopup v-model="showEdit">
-    <form class="lg:w-240" @submit.prevent="submitEdit">
+    <form @submit.prevent="submitEdit">
       <h2 class="mb-2 text-center font-bold">Modifier les informations</h2>
 
       <div class="flex flex-col gap-4">
