@@ -7,7 +7,7 @@ export default defineNuxtConfig({
   vite: {
     plugins: [tailwindcss()],
   },
-  modules: ["@nuxt/fonts", "@nuxt/icon", "nuxt-qrcode"],
+  modules: ["@nuxt/fonts", "@nuxt/icon", "nuxt-qrcode", "@nuxt/image"],
   fonts: {
     families: [
       {
