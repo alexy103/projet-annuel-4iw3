@@ -1,11 +1,12 @@
 <script setup lang="ts">
-defineProps<{
+const props = defineProps<{
   label: string;
   placeholder?: string;
   type?: string;
+  value?: string;
 }>();
 
-const inputValue = ref("");
+const inputValue = ref(props.value || "");
 </script>
 
 <template>

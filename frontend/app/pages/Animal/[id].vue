@@ -55,7 +55,7 @@ const submitEdit = () => {
       </div>
     </figure>
 
-    <BaseSection title="À venir" action="Tout voir" color="green">
+    <BaseSection title="À venir" action="Tout voir">
       <div class="-mx-4 flex gap-2 overflow-x-auto px-4">
         <Appointment v-for="i in 4" />
       </div>
@@ -75,13 +75,12 @@ const submitEdit = () => {
         title="Évolution"
         action="Nouvelle mesure"
         plus
-        color="green"
         class="md:flex md:flex-1 md:flex-col md:items-stretch"
       >
         <div class="md:flex md:flex-1 md:flex-col md:items-stretch">
           <div class="bg-grey-500 mb-2 h-40 w-full rounded-xl md:flex-1"></div>
 
-          <BaseToggle
+          <AnimalStatsToggle
             class="mx-auto"
             left-label="Nouvelle mesure"
             right-label="Ancienne mesure"
@@ -98,7 +97,7 @@ const submitEdit = () => {
   </div>
 
   <BasePopup v-model="showInfo">
-    <div class="w-240">
+    <div class="lg:w-240">
       <h2 class="mb-2 text-center font-bold">Informations supplémentaires</h2>
 
       <p>Date de naissance : 25/12/2020</p>
@@ -123,7 +122,7 @@ const submitEdit = () => {
   </BasePopup>
 
   <BasePopup v-model="showEdit">
-    <form class="w-240" @submit.prevent="submitEdit">
+    <form class="lg:w-240" @submit.prevent="submitEdit">
       <h2 class="mb-2 text-center font-bold">Modifier les informations</h2>
 
       <div class="flex flex-col gap-4">
