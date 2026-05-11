@@ -10,7 +10,7 @@ definePageMeta({
       <div class="space-y-4">
         <BaseInput label="Nom d'utilisateur" />
         <BaseInput label="Mot de passe" type="password" />
-        <NuxtLink to="/profile/1">
+        <NuxtLink to="/" class="mx-auto block w-fit">
           <BaseButton class="flex justify-center">Connexion</BaseButton>
         </NuxtLink>
       </div>
@@ -25,10 +25,5 @@ definePageMeta({
         </NuxtLink>
       </div>
     </div>
-    <NuxtImg
-      src="/logo.svg"
-      alt=""
-      class="absolute top-1/2 left-1/2 -z-10 size-120 -translate-1/2 opacity-50"
-    />
   </div>
 </template>

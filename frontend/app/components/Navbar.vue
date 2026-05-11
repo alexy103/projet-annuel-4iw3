@@ -1,6 +1,8 @@
 <script setup lang="ts">
-const showNewAnimalForm = ref(false);
+const { showNewAnimalForm, openNewAnimalForm } = useNewAnimalForm();
 const id = 1;
+
+const userStore = useUserStore();
 </script>
 
 <template>
@@ -18,26 +20,21 @@ const id = 1;
           class="ml-2 size-8 text-black"
         />
       </div>
-      <ul class="-mx-4 flex items-center gap-2 overflow-x-auto px-4">
-        <li class="shrink-0">
+      <ul
+        v-if="userStore.animals.length"
+        class="-mx-4 flex items-center gap-2 overflow-x-auto px-4"
+      >
+        <li
+          v-for="animal in userStore.animals"
+          :key="animal.id"
+          class="shrink-0"
+        >
           <NuxtLink
-            to="/animal/1"
+            :to="'/animal/' + animal.id"
             class="flex h-16 w-16 items-center justify-center rounded-full bg-green-300 text-sm font-bold text-black"
           >
             <img
-              src="/kyky.jpg"
-              alt=""
-              class="h-16 w-16 rounded-full object-cover"
-            />
-          </NuxtLink>
-        </li>
-        <li v-for="i in 10" class="shrink-0">
-          <NuxtLink
-            to="/animal/1"
-            class="flex h-16 w-16 items-center justify-center rounded-full bg-green-300 text-sm font-bold text-black"
-          >
-            <img
-              src="/scooby.png"
+              :src="animal.image"
               alt=""
               class="h-16 w-16 rounded-full object-cover"
             />
@@ -47,7 +44,7 @@ const id = 1;
           <button
             type="button"
             class="bg-grey-500 flex h-14 w-14 cursor-pointer items-center justify-center rounded-full text-sm font-bold text-black"
-            @click="showNewAnimalForm = true"
+            @click="openNewAnimalForm"
           >
             <Icon name="material-symbols:add-rounded" class="size-6" />
           </button>
