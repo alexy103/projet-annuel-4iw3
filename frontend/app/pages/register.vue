@@ -17,17 +17,5 @@ definePageMeta({
         <BaseButton class="flex justify-center">Créer mon compte</BaseButton>
       </NuxtLink>
     </div>
-
-    <NuxtImg
-      src="/logo.svg"
-      alt=""
-      class="absolute top-1/2 left-1/2 -z-10 size-120 -translate-1/2 opacity-50"
-    />
-    <button @click="$router.back()">
-      <Icon
-        name="solar:round-arrow-left-outline"
-        class="absolute top-4 right-4 size-7"
-      />
-    </button>
   </div>
 </template>
