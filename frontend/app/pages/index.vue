@@ -1,6 +1,6 @@
 <script setup lang="ts">
 const userStore = useUserStore();
-const { openNewAnimalForm } = useNewAnimalForm();
+const profilePicture = ref<string | null>(null);
 
 definePageMeta({
   layout: "onboarding",
@@ -9,6 +9,15 @@ definePageMeta({
 const completeOnboarding = async () => {
   await userStore.completeOnboarding();
   setPageLayout("default");
+};
+
+const handleProfilePictureUpload = (event: Event) => {
+  const input = event.target as HTMLInputElement;
+  const file = input.files?.[0];
+
+  if (!file) return;
+
+  profilePicture.value = URL.createObjectURL(file);
 };
 </script>
 
@@ -39,9 +48,11 @@ const completeOnboarding = async () => {
       Il semble que vous n'ayez pas encore ajouté d'animal à votre compte...
     </h2>
 
-    <BaseButton class="flex justify-center" @click="openNewAnimalForm">
-      Ajouter mon premier animal
-    </BaseButton>
+    <NuxtLink to="/add-animal">
+      <BaseButton class="flex justify-center">
+        Ajouter mon premier animal
+      </BaseButton>
+    </NuxtLink>
   </div>
 
   <div v-else class="space-y-4">
@@ -56,11 +67,27 @@ const completeOnboarding = async () => {
 
     <h2 class="text-xl font-bold">Une photo ?</h2>
 
-    <div
-      class="bg-grey-500 mx-auto flex size-20 cursor-pointer items-center justify-center rounded-full"
+    <label
+      for="profile-picture"
+      class="bg-grey-500 mx-auto flex size-20 cursor-pointer items-center justify-center overflow-hidden rounded-full"
     >
-      <Icon name="material-symbols:upload" class="size-10 text-black" />
-    </div>
+      <img
+        v-if="profilePicture"
+        :src="profilePicture"
+        alt="Photo de profil"
+        class="size-full object-cover"
+      />
+
+      <Icon v-else name="material-symbols:upload" class="size-10 text-black" />
+    </label>
+
+    <input
+      id="profile-picture"
+      type="file"
+      class="hidden"
+      accept="image/*"
+      @change="handleProfilePictureUpload"
+    />
 
     <h2 class="text-xl font-bold">Vos préférences</h2>
 

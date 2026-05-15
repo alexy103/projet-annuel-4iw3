@@ -1,5 +1,4 @@
 <script setup lang="ts">
-const { showNewAnimalForm, openNewAnimalForm } = useNewAnimalForm();
 const id = 1;
 
 const userStore = useUserStore();
@@ -41,37 +40,16 @@ const userStore = useUserStore();
           </NuxtLink>
         </li>
         <li>
-          <button
-            type="button"
-            class="bg-grey-500 flex h-14 w-14 cursor-pointer items-center justify-center rounded-full text-sm font-bold text-black"
-            @click="openNewAnimalForm"
-          >
-            <Icon name="material-symbols:add-rounded" class="size-6" />
-          </button>
+          <NuxtLink to="/add-animal">
+            <button
+              type="button"
+              class="bg-grey-500 flex h-14 w-14 cursor-pointer items-center justify-center rounded-full text-sm font-bold text-black"
+            >
+              <Icon name="material-symbols:add-rounded" class="size-6" />
+            </button>
+          </NuxtLink>
         </li>
       </ul>
     </div>
-
-    <BasePopup v-model="showNewAnimalForm">
-      <h2 class="mb-2 text-center font-bold">Ajouter un nouvel animal</h2>
-      <form action="" class="space-y-2">
-        <BaseInput label="Nom" placeholder="Kyky" />
-        <BaseInput label="Espèce" placeholder="Chat" />
-        <BaseInput label="Race" placeholder="European shorthair" />
-        <BaseInput
-          label="Date de naissance"
-          placeholder="01/01/2020"
-          type="date"
-        />
-      </form>
-
-      <button class="button-sm mx-auto mt-4 border shadow">
-        <Icon
-          name="material-symbols:add-rounded"
-          class="size-6 text-green-500"
-        />
-        Ajouter
-      </button>
-    </BasePopup>
   </div>
 </template>
