@@ -148,6 +148,6 @@ watch(species, (newSpecies) => {
       </div>
     </div>
 
-    <BaseButton class="flex justify-center">Terminer</BaseButton>
+    <BaseButton class="flex justify-center">Ajouter</BaseButton>
   </div>
 </template>
