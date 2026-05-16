@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { requireApiKey, requireAuth, validateSchema } from "../middlewares";
 import {
+  completeUserOnboarding,
   createPermissionToUser,
   createUser, deletePermissionFromUser,
   deleteUser, getPermissionsByUserId,
@@ -49,6 +50,8 @@ usersRouter.patch(
 );
 
 usersRouter.patch("/:userId/clinic", requireApiKey, requireAuth("admin", "clinic"), updateUserClinicId);
+
+usersRouter.patch("/:userId/onboarding", requireApiKey, requireAuth(), completeUserOnboarding);
 
 usersRouter.delete("/:userId", requireApiKey, requireAuth("admin"), deleteUser);
 

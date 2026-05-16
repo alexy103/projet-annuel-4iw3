@@ -180,6 +180,26 @@ registry.registerPath({
 });
 
 registry.registerPath({
+  method: "patch",
+  security: [{ ApiKeyAuth: [] }, { BearerAuth: [] }],
+  path: "/users/{userId}/onboarding",
+  tags: ["Users"],
+  summary: "Mark user onboarding as completed",
+  request: {
+    params: zod.object({ userId: zod.string() }),
+  },
+  responses: {
+    200: JsonResponse(UserSchema, "Onboarding completed"),
+    400: BadRequest,
+    401: UnauthorizedResponse,
+    403: ForbiddenResponse,
+    404: NotFoundResponse,
+    409: ConflictResponse,
+    500: ServerErrorResponse,
+  },
+});
+
+registry.registerPath({
   method: "delete",
   security: [{ ApiKeyAuth: [] }, { BearerAuth: [] }],
   path: "/users/{userId}",

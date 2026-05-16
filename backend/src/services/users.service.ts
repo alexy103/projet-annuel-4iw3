@@ -145,6 +145,14 @@ export const userService = {
     return usersRepository.updateClinic(userId, clinicId);
   },
 
+  async completeOnboarding(userId: number, callerId: number, role: string): Promise<User> {
+    const existingUser: User = await usersRepository.findById(userId);
+    if (!existingUser) throw new AppError("User not found", 404);
+    if (role === "user" && userId !== callerId) throw new AppError("Access denied", 403);
+    if (existingUser.onboarding_completed) throw new AppError("Onboarding already completed", 409);
+    return usersRepository.updateOnboardingCompleted(userId);
+  },
+
   async delete(userId: number): Promise<User> {
     const existingUser: User = await usersRepository.findById(userId);
     if (!existingUser) throw new AppError("User not found", 404);
