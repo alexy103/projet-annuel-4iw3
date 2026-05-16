@@ -36,7 +36,8 @@ export const getAnimalsByUserId = async (req: Request, res: Response) => {
             return ApiResponse.badRequest(res, "User ID is required");
         }
 
-        const animals: Animal[] = await animalService.getByUserId(Number(userId));
+        const { userId: callerId, role } = (req as AuthenticatedRequest).user;
+        const animals: Animal[] = await animalService.getByUserId(Number(userId), role, callerId);
         return ApiResponse.success(res, animals);
     } catch (error) {
         return ApiResponse.getError(res, error);
