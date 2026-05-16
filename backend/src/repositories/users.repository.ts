@@ -362,6 +362,16 @@ export const usersRepository = {
     return user;
   },
 
+  async updateOnboardingCompleted(userId: number): Promise<User> {
+    const result = await db.query(
+      `UPDATE users SET onboarding_completed = true, updated_at = NOW() WHERE id = $1 RETURNING *`,
+      [userId],
+    );
+    const user: User = result.rows[0];
+    if (!user) throw new AppError("User update failed", 400);
+    return user;
+  },
+
   async updateClinic(userId: number, clinicId: number): Promise<User> {
     const result = await db.query(
         `

@@ -115,6 +115,19 @@ export const toggleUserActivation = async (req: Request, res: Response) => {
   }
 };
 
+export const completeUserOnboarding = async (req: Request, res: Response) => {
+  try {
+    const userId: string | undefined = req.params.userId;
+    if (!userId) return ApiResponse.badRequest(res, "User ID is required");
+
+    const { userId: callerId, role } = (req as AuthenticatedRequest).user;
+    const user: User = await userService.completeOnboarding(Number(userId), callerId, role);
+    return ApiResponse.success(res, user);
+  } catch (error) {
+    return ApiResponse.getError(res, error);
+  }
+};
+
 export const deleteUser = async (req: Request, res: Response) => {
   try {
     const userId: string | undefined = req.params.userId;

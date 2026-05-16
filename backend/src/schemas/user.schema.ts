@@ -85,6 +85,7 @@ export const UserSchema = UserBaseSchema.extend({
   email_verification_code: zod.string().min(0).max(6).nullable(),
   email_verification_expires_at: zod.date().nullable(),
   is_activated: zod.boolean(),
+  onboarding_completed: zod.boolean(),
   password_temp_expires_at: zod.date().nullable(),
   created_at: zod.date(),
   updated_at: zod.date(),
