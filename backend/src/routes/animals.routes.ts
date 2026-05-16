@@ -19,7 +19,7 @@ export const animalsRouter: Router = Router();
 
 animalsRouter.get("/", requireApiKey, requireAuth("admin", "user"), getAnimals);
 
-animalsRouter.get("/search", requireApiKey, requireAuth("admin", "user"), getAnimalsByName);
+animalsRouter.get("/search", requireApiKey, requireAuth(), getAnimalsByName);
 
 animalsRouter.get("/shared", requireApiKey, requireAuth(), getSharedAnimals);
 
