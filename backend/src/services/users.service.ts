@@ -34,7 +34,7 @@ export const userService = {
     return usersRepository.findById(id);
   },
 
-  async create(data: CreateUserPayload): Promise<User> {
+  async create(data: CreateUserPayload, password?: string): Promise<User> {
     data = {
       ...data,
       email: minimize(data.email),
@@ -58,8 +58,9 @@ export const userService = {
 
     const verificationCode: string = generateVerificationCode();
 
-    const passwordGenerated: string = generateSecurePassword();
-    const passwordHash: string = await hashPassword(passwordGenerated);
+    const isSelfRegistered = !!password;
+    const passwordToHash: string = isSelfRegistered ? password : generateSecurePassword();
+    const passwordHash: string = await hashPassword(passwordToHash);
     if (!passwordHash) {
       throw new AppError("Internal Server Error", 500);
     }
@@ -70,8 +71,10 @@ export const userService = {
       verificationCode,
     );
 
-    if (user.must_change_password) {
-      await sendTempPasswordEmail(user.email, passwordGenerated);
+    if (isSelfRegistered) {
+      await sendVerificationCodeEmail(user.email, verificationCode);
+    } else {
+      await sendTempPasswordEmail(user.email, passwordToHash);
       await sendVerificationCodeEmail(user.email, verificationCode);
     }
 
@@ -143,6 +146,14 @@ export const userService = {
     if (!existingClinic) throw new AppError("Clinic not found", 404);
 
     return usersRepository.updateClinic(userId, clinicId);
+  },
+
+  async completeOnboarding(userId: number, callerId: number, role: string): Promise<User> {
+    const existingUser: User = await usersRepository.findById(userId);
+    if (!existingUser) throw new AppError("User not found", 404);
+    if (role === "user" && userId !== callerId) throw new AppError("Access denied", 403);
+    if (existingUser.onboarding_completed) throw new AppError("Onboarding already completed", 409);
+    return usersRepository.updateOnboardingCompleted(userId);
   },
 
   async delete(userId: number): Promise<User> {

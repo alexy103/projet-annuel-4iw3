@@ -93,6 +93,28 @@ export const ChangePasswordPayloadSchema = zod
   .strict();
 registry.register("ChangePasswordPayload", ChangePasswordPayloadSchema);
 
+const passwordSchema = zod
+  .string()
+  .min(12, "Password too short (minimum 12 characters)")
+  .regex(
+    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{12,}$/,
+    "Password must contain uppercase, lowercase, number, special char",
+  )
+  .openapi({ description: "User password", minLength: 12, format: "password", example: "P@ssw0rd1234" });
+
+export const RegisterPayloadSchema = zod
+  .object({
+    last_name: zod.string().trim().min(1).max(150).regex(/^[a-zA-ZÀ-ÿ\s'-]+$/).openapi({ example: "DOE" }),
+    first_name: zod.string().trim().min(1).max(150).regex(/^[a-zA-ZÀ-ÿ\s'-]+$/).openapi({ example: "John" }),
+    email: zod.email().max(254).openapi({ example: "john.doe@test.com" }),
+    password: passwordSchema,
+    clinic_id: zod.number().int().positive().optional().openapi({ example: 1 }),
+  })
+  .strict();
+registry.register("RegisterPayload", RegisterPayloadSchema);
+
+export type RegisterPayload = zod.infer<typeof RegisterPayloadSchema>;
+
 export const ResetPasswordPayloadSchema = zod
   .object({
     email: zod.email().max(254, "Email too long"),

@@ -13,7 +13,7 @@ import {
   LoginPayloadSchema,
   LoginSchema,
   RefreshTokenSchema, RefreshTokenPayloadSchema, VerifyCodePayloadSchema, ResendCodePayloadSchema,
-  ChangePasswordPayloadSchema, ResetPasswordPayloadSchema, UserSchema, CreateUserPayloadSchema
+  ChangePasswordPayloadSchema, ResetPasswordPayloadSchema, UserSchema, RegisterPayloadSchema
 } from "../schemas";
 
 registry.registerPath({
@@ -26,7 +26,7 @@ registry.registerPath({
     body: {
       content: {
         "application/json": {
-          schema: CreateUserPayloadSchema,
+          schema: RegisterPayloadSchema,
         },
       },
     },

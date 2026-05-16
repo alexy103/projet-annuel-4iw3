@@ -1,6 +1,6 @@
 import { AppError} from "../types";
 import {clinicsRepository, rolesRepository, sessionsRepository, usersRepository} from "../repositories";
-import {CreateUserPayload, User, UserSession} from "../schemas";
+import {CreateUserPayload, RegisterPayload, User, UserSession} from "../schemas";
 
 import {
   generateSecurePassword,
@@ -21,22 +21,24 @@ import { Request } from "express";
 import {userService} from "./users.service";
 
 export const authService = {
-  async register(data: CreateUserPayload){
+  async register(data: RegisterPayload){
     const role = await rolesRepository.findByLabel("user");
-    if(!role) throw new AppError("User not found", 404);
+    if(!role) throw new AppError("Role not found", 404);
 
     if(data.clinic_id){
       const clinic = await clinicsRepository.findById(data.clinic_id);
       if(!clinic) throw new AppError("Clinic not found", 404);
     }
 
-    data = {
-      ...data,
-      must_change_password: true,
-      role_id: role.id
-    }
+    const { password, ...userData } = data;
 
-    return userService.create(data);
+    const createPayload: CreateUserPayload = {
+      ...userData,
+      must_change_password: false,
+      role_id: role.id,
+    };
+
+    return userService.create(createPayload, password);
   },
 
   async login(email: string, password: string, req?: Request) {
@@ -60,13 +62,22 @@ export const authService = {
       password,
       existingUser.password_hash,
     );
-    if (!checkPassword) throw new AppError("Invalid user or password", 401);
+    if (!checkPassword) {
+      console.log("cc");
+      throw new AppError("Invalid user or password", 401);
+    }
 
     const jwtSecret: string | undefined = process.env.JWT_SECRET;
-    if (!jwtSecret) throw new AppError("Invalid user or password", 401);
+    if (!jwtSecret) {
+      console.log("cc2");
+      throw new AppError("Invalid user or password", 401);
+    }
 
     const jwtRefreshSecret: string | undefined = process.env.JWT_REFRESH_SECRET;
-    if (!jwtRefreshSecret) throw new AppError("Invalid user or password", 401);
+    if (!jwtRefreshSecret) {
+      console.log("cc3");
+      throw new AppError("Invalid user or password", 401);
+    }
 
     const accessToken: string = jwt.sign(
       { userId: existingUser.id },
