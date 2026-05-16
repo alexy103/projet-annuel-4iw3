@@ -5,6 +5,7 @@ export interface AuthenticatedRequest extends Request {
   user: {
     userId: number;
     role: string;
+    clinic_id?: number;
   };
 }
 

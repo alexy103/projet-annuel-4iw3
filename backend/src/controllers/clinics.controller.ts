@@ -1,11 +1,13 @@
 import { Request, Response } from "express";
 import ApiResponse from "../utils/api-responses.utils";
-import {Clinic} from "../schemas";
-import {clinicService} from "../services";
+import { Clinic } from "../schemas";
+import { clinicService } from "../services";
+import { AuthenticatedRequest } from "../types";
 
 export const getClinics = async (req: Request, res: Response) => {
     try {
-        const clinics: Clinic[] = await clinicService.getAll();
+        const { role, clinic_id } = (req as AuthenticatedRequest).user;
+        const clinics: Clinic[] = await clinicService.getAll(role, clinic_id);
         return ApiResponse.success(res, clinics);
     } catch (error) {
         return ApiResponse.getError(res, error);
@@ -19,7 +21,8 @@ export const getClinicById = async (req: Request, res: Response) => {
             return ApiResponse.badRequest(res, "Clinic ID is required");
         }
 
-        const clinic: Clinic = await clinicService.getById(Number(clinicId));
+        const { role, clinic_id } = (req as AuthenticatedRequest).user;
+        const clinic: Clinic = await clinicService.getById(Number(clinicId), role, clinic_id);
         return ApiResponse.success(res, clinic);
     } catch (error) {
         return ApiResponse.getError(res, error);
@@ -95,10 +98,8 @@ export const updateClinic = async (req: Request, res: Response) => {
             return ApiResponse.badRequest(res, "Clinic ID is required");
         }
 
-        const clinic: Clinic = await clinicService.update(
-            Number(clinicId),
-            req.body,
-        );
+        const { role, clinic_id } = (req as AuthenticatedRequest).user;
+        const clinic: Clinic = await clinicService.update(Number(clinicId), req.body, role, clinic_id);
         return ApiResponse.success(res, clinic);
     } catch (error) {
         return ApiResponse.getError(res, error);

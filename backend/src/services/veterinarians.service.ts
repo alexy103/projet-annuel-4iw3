@@ -8,26 +8,37 @@ import {
 import {Veterinarian, CreateVeterinarianPayload, UpdateVeterinarianPayload, Clinic, Medicine} from "../schemas";
 
 export const veterinarianService = {
-  async getAll(): Promise<Veterinarian[]> {
+  async getAll(role: string, callerClinicId?: number): Promise<Veterinarian[]> {
+    if (role === "clinic") return veterinariansRepository.findByClinicId(callerClinicId!);
     return veterinariansRepository.findAll();
   },
 
-  async getById(veterinarianId: number): Promise<Veterinarian> {
-    return veterinariansRepository.findById(veterinarianId);
+  async getById(veterinarianId: number, role: string, callerClinicId?: number): Promise<Veterinarian> {
+    const vet = await veterinariansRepository.findById(veterinarianId);
+    if (!vet) throw new AppError("Veterinarian not found", 404);
+    if (role === "clinic" && vet.clinic_id !== callerClinicId) throw new AppError("Access denied", 403);
+    return vet;
   },
 
-  async getByClinicId(clinicId: number): Promise<Veterinarian[]> {
+  async getByClinicId(clinicId: number, role: string, callerClinicId?: number): Promise<Veterinarian[]> {
+    if (role === "clinic" && clinicId !== callerClinicId) throw new AppError("Access denied", 403);
     return veterinariansRepository.findByClinicId(clinicId);
   },
 
   async getByFullName(
     firstName: string | undefined,
     lastName: string | undefined,
+    role: string,
+    callerClinicId?: number,
   ): Promise<Veterinarian[]> {
-    return veterinariansRepository.findByFullName(firstName, lastName);
+    const vets = await veterinariansRepository.findByFullName(firstName, lastName);
+    if (role === "clinic") return vets.filter(v => v.clinic_id === callerClinicId);
+    return vets;
   },
 
-  async create(data: CreateVeterinarianPayload): Promise<Veterinarian> {
+  async create(data: CreateVeterinarianPayload, role: string, callerClinicId?: number): Promise<Veterinarian> {
+    if (role === "clinic" && data.clinic_id !== callerClinicId) throw new AppError("Access denied", 403);
+
     const existingClinic: Clinic = await clinicsRepository.findById(data.clinic_id);
     if (!existingClinic) {
       throw new AppError("Clinic not found", 404);
@@ -39,9 +50,12 @@ export const veterinarianService = {
     return veterinariansRepository.create(data);
   },
 
-  async update(veterinarianId: number, data: UpdateVeterinarianPayload): Promise<Veterinarian> {
+  async update(veterinarianId: number, data: UpdateVeterinarianPayload, role: string, callerClinicId?: number): Promise<Veterinarian> {
     const existingVeterinarian: Veterinarian = await veterinariansRepository.findById(veterinarianId);
     if (!existingVeterinarian) throw new AppError("Veterinarian not found", 404);
+
+    if (role === "clinic" && existingVeterinarian.clinic_id !== callerClinicId) throw new AppError("Access denied", 403);
+    if (role === "clinic" && data.clinic_id !== undefined && data.clinic_id !== callerClinicId) throw new AppError("Access denied", 403);
 
     if (data.clinic_id) {
       const existingClinic: Clinic = await clinicsRepository.findById(data.clinic_id);
@@ -58,9 +72,11 @@ export const veterinarianService = {
     return veterinariansRepository.update(veterinarianId, data);
   },
 
-  async setIsPresent(veterinarianId: number, isPresent: boolean): Promise<Veterinarian> {
+  async setIsPresent(veterinarianId: number, isPresent: boolean, role: string, callerClinicId?: number): Promise<Veterinarian> {
     const existingVeterinarian: Veterinarian = await veterinariansRepository.findById(veterinarianId);
     if (!existingVeterinarian) throw new AppError("Veterinarian not found", 404);
+
+    if (role === "clinic" && existingVeterinarian.clinic_id !== callerClinicId) throw new AppError("Access denied", 403);
 
     if (existingVeterinarian.is_present && existingVeterinarian.is_present == isPresent) {
       throw new AppError("Veterinarian already activated", 409);
@@ -75,9 +91,11 @@ export const veterinarianService = {
     return veterinariansRepository.updateIsPresent(veterinarianId, isPresent);
   },
 
-  async delete(veterinarianId: number): Promise<Veterinarian> {
+  async delete(veterinarianId: number, role: string, callerClinicId?: number): Promise<Veterinarian> {
     const existingVeterinarian: Veterinarian = await veterinariansRepository.findById(veterinarianId);
     if (!existingVeterinarian) throw new AppError("Veterinarian not found", 404);
+
+    if (role === "clinic" && existingVeterinarian.clinic_id !== callerClinicId) throw new AppError("Access denied", 403);
 
     const consultationsCount: number = await consultationsRepository
       .findByVeterinarianId(veterinarianId).then(c => c.length);
