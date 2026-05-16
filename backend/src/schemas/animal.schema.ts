@@ -117,6 +117,10 @@ registry.register("UpdateAnimalPayload", UpdateAnimalPayloadSchema);
 
 export const AnimalSchema = AnimalBaseSchema.extend({
   id: zod.number(),
+  profile_picture: zod.string().nullable().optional().openapi({
+    description: "Profile picture URL",
+    example: "/uploads/animals/1-1234567890.jpg",
+  }),
   created_at: zod.date(),
   updated_at: zod.date(),
 });

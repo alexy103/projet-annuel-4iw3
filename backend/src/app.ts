@@ -1,6 +1,7 @@
 import "./docs/openapi";
 
 import express, { Express } from "express";
+import path from "path";
 import {
   authRouter,
   permissionsRouter,
@@ -31,6 +32,7 @@ import { openApiDocument } from "./docs";
 export const app: Express = express();
 
 app.use(express.json());
+app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 
 app.use("/api/auth", authRouter);
 app.use("/api/users", usersRouter);

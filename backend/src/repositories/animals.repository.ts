@@ -108,6 +108,16 @@ class AnimalRepository extends BaseRepository<Animal, CreateAnimalPayload, Updat
     return animal;
   }
 
+  async updateProfilePicture(animalId: number, picturePath: string): Promise<Animal> {
+    const result = await db.query<Animal>(
+      `UPDATE ${this.table} SET profile_picture = $1, updated_at = NOW() WHERE id = $2 RETURNING *`,
+      [picturePath, animalId],
+    );
+    const animal: Animal | undefined = result.rows[0];
+    if (!animal) throw new AppError("Animal profile picture update failed", 400);
+    return animal;
+  }
+
   async updateMicroship(animalId: number, microshipId: number | null): Promise<Animal> {
     const result = await db.query<Animal>(
       `UPDATE ${this.table} SET
