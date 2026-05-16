@@ -2,11 +2,12 @@ import { Request, Response } from "express";
 import ApiResponse from "../utils/api-responses.utils";
 import { Consultation } from "../schemas";
 import { consultationService } from "../services";
+import { AuthenticatedRequest } from "../types";
 
 export const getConsultations = async (req: Request, res: Response) => {
     try {
-        const consultations: Consultation[] =
-            await consultationService.getAll();
+        const { role, clinic_id } = (req as AuthenticatedRequest).user;
+        const consultations: Consultation[] = await consultationService.getAll(role, clinic_id);
 
         return ApiResponse.success(res, consultations);
     } catch (error) {
@@ -29,8 +30,8 @@ export const getConsultationById = async (
             );
         }
 
-        const consultation: Consultation =
-            await consultationService.getById(Number(consultationId));
+        const { role, clinic_id } = (req as AuthenticatedRequest).user;
+        const consultation: Consultation = await consultationService.getById(Number(consultationId), role, clinic_id);
 
         return ApiResponse.success(res, consultation);
     } catch (error) {
@@ -53,10 +54,8 @@ export const getConsultationsByAppointmentId = async (
             );
         }
 
-        const consultations: Consultation =
-            await consultationService.getByAppointmentId(
-                Number(appointmentId),
-            );
+        const { role, clinic_id } = (req as AuthenticatedRequest).user;
+        const consultations: Consultation = await consultationService.getByAppointmentId(Number(appointmentId), role, clinic_id);
 
         return ApiResponse.success(res, consultations);
     } catch (error) {
@@ -82,10 +81,8 @@ export const getConsultationsByVeterinarianId = async (
             );
         }
 
-        const consultations: Consultation[] =
-            await consultationService.getByVeterinarianId(
-                Number(veterinarianId),
-            );
+        const { role, clinic_id } = (req as AuthenticatedRequest).user;
+        const consultations: Consultation[] = await consultationService.getByVeterinarianId(Number(veterinarianId), role, clinic_id);
 
         return ApiResponse.success(res, consultations);
     } catch (error) {
@@ -98,8 +95,8 @@ export const createConsultation = async (
     res: Response,
 ) => {
     try {
-        const consultation: Consultation =
-            await consultationService.create(req.body);
+        const { role, clinic_id } = (req as AuthenticatedRequest).user;
+        const consultation: Consultation = await consultationService.create(req.body, role, clinic_id);
 
         return ApiResponse.success(res, consultation, 201);
     } catch (error) {
@@ -122,11 +119,8 @@ export const updateConsultation = async (
             );
         }
 
-        const consultation: Consultation =
-            await consultationService.update(
-                Number(consultationId),
-                req.body,
-            );
+        const { role, clinic_id } = (req as AuthenticatedRequest).user;
+        const consultation: Consultation = await consultationService.update(Number(consultationId), req.body, role, clinic_id);
 
         return ApiResponse.success(res, consultation);
     } catch (error) {
@@ -149,8 +143,8 @@ export const deleteConsultation = async (
             );
         }
 
-        const consultation: Consultation =
-            await consultationService.delete(Number(consultationId));
+        const { role, clinic_id } = (req as AuthenticatedRequest).user;
+        const consultation: Consultation = await consultationService.delete(Number(consultationId), role, clinic_id);
 
         return ApiResponse.success(res, consultation);
     } catch (error) {

@@ -64,32 +64,41 @@ async function checkClinicAvailability(clinicId: number, date: Date | string, ti
 }
 
 export const appointmentService = {
-  async getAll(callerId: number, role: string): Promise<Appointment[]> {
-    if (role === "admin" || role === "clinic") return appointmentsRepository.findAll();
+  async getAll(callerId: number, role: string, callerClinicId?: number): Promise<Appointment[]> {
+    if (role === "clinic") return appointmentsRepository.findByClinicId(callerClinicId!);
+    if (role === "admin") return appointmentsRepository.findAll();
     return appointmentsRepository.findByUserId(callerId);
   },
 
-  async getById(appointmentId: number, callerId: number, role: string): Promise<Appointment> {
+  async getById(appointmentId: number, callerId: number, role: string, callerClinicId?: number): Promise<Appointment> {
     const appointment = await appointmentsRepository.findById(appointmentId);
     if (!appointment) throw new AppError("Appointment not found", 404);
+    if (role === "clinic" && appointment.clinic_id !== callerClinicId) throw new AppError("Access denied", 403);
     if (role === "user" && appointment.user_id !== callerId) throw new AppError("Access denied", 403);
     return appointment;
   },
 
-  async getByUserId(userId: number): Promise<Appointment[]> {
-    return appointmentsRepository.findByUserId(userId);
+  async getByUserId(userId: number, role: string, callerClinicId?: number): Promise<Appointment[]> {
+    const appointments = await appointmentsRepository.findByUserId(userId);
+    if (role === "clinic") return appointments.filter(a => a.clinic_id === callerClinicId);
+    return appointments;
   },
 
-  async getByAnimalId(animalId: number): Promise<Appointment[]> {
-    return appointmentsRepository.findByAnimalId(animalId);
+  async getByAnimalId(animalId: number, role: string, callerClinicId?: number): Promise<Appointment[]> {
+    const appointments = await appointmentsRepository.findByAnimalId(animalId);
+    if (role === "clinic") return appointments.filter(a => a.clinic_id === callerClinicId);
+    return appointments;
   },
 
-  async getByClinicId(clinicId: number): Promise<Appointment[]> {
+  async getByClinicId(clinicId: number, role: string, callerClinicId?: number): Promise<Appointment[]> {
+    if (role === "clinic" && clinicId !== callerClinicId) throw new AppError("Access denied", 403);
     return appointmentsRepository.findByClinicId(clinicId);
   },
 
-  async getByReasonId(reasonId: number): Promise<Appointment[]> {
-    return appointmentsRepository.findByReasonId(reasonId);
+  async getByReasonId(reasonId: number, role: string, callerClinicId?: number): Promise<Appointment[]> {
+    const appointments = await appointmentsRepository.findByReasonId(reasonId);
+    if (role === "clinic") return appointments.filter(a => a.clinic_id === callerClinicId);
+    return appointments;
   },
 
   async create(data: CreateAppointmentPayload): Promise<Appointment> {
@@ -152,9 +161,11 @@ export const appointmentService = {
     return appointmentsRepository.update(appointmentId, data);
   },
 
-  async setIsCompleted(appointmentId: number, isCompleted: boolean): Promise<Appointment> {
+  async setIsCompleted(appointmentId: number, isCompleted: boolean, role: string, callerClinicId?: number): Promise<Appointment> {
     const existingAppointment: Appointment = await appointmentsRepository.findById(appointmentId);
     if (!existingAppointment) throw new AppError("Appointment not found", 404);
+
+    if (role === "clinic" && existingAppointment.clinic_id !== callerClinicId) throw new AppError("Access denied", 403);
 
     if (existingAppointment.is_completed && existingAppointment.is_completed == isCompleted) {
       throw new AppError("Appointment already completed", 409);
@@ -169,9 +180,11 @@ export const appointmentService = {
     return appointmentsRepository.updateIsCompleted(appointmentId, isCompleted);
   },
 
-  async delete(appointmentId: number): Promise<Appointment> {
+  async delete(appointmentId: number, role: string, callerClinicId?: number): Promise<Appointment> {
     const existingAppointment: Appointment = await appointmentsRepository.findById(appointmentId);
     if (!existingAppointment) throw new AppError("Appointment not found", 404);
+
+    if (role === "clinic" && existingAppointment.clinic_id !== callerClinicId) throw new AppError("Access denied", 403);
 
     const consultation : Consultation | null = await consultationsRepository.findByAppointmentId(appointmentId);
 

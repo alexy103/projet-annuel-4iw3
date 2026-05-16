@@ -19,7 +19,7 @@ export const animalService = {
   async getById(animalId: number, role: string, callerId?: number): Promise<Animal> {
     const animal = await animalsRepository.findById(animalId);
     if (role === "user" && animal?.user_id !== callerId) throw new AppError("Access denied", 403);
-    if (role === "clinic" && !animal?.is_shared) throw new AppError("Access denied", 403);
+    if (role === "clinic" && !animal?.is_shared && animal?.user_id !== callerId) throw new AppError("Access denied", 403);
     return animal;
   },
 
@@ -27,16 +27,17 @@ export const animalService = {
     return animalsRepository.findAllShared();
   },
 
-  async getByUserId(userId: number): Promise<Animal[]> {
-    return animalsRepository.findByUserId(userId);
+  async getByUserId(userId: number, role: string, callerId?: number): Promise<Animal[]> {
+    const animals = await animalsRepository.findByUserId(userId);
+    if (role === "clinic" && userId !== callerId) return animals.filter(a => a.is_shared);
+    return animals;
   },
 
   async getByName(name: string, callerId: number, role: string): Promise<Animal[]> {
     if (role === "admin") return animalsRepository.findByName(name);
     if (role === "user") return animalsRepository.findByName(name, callerId);
-    return animalsRepository.findAllShared().then(animals =>
-      animals.filter(a => a.name.toLowerCase().startsWith(name.toLowerCase()))
-    );
+    const animals = await animalsRepository.findByName(name);
+    return animals.filter(a => a.is_shared || a.user_id === callerId);
   },
 
   async create(data: CreateAnimalPayload): Promise<Animal> {

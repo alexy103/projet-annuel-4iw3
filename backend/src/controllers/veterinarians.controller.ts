@@ -2,11 +2,12 @@ import { Request, Response } from "express";
 import ApiResponse from "../utils/api-responses.utils";
 import { Veterinarian } from "../schemas";
 import { veterinarianService } from "../services";
+import { AuthenticatedRequest } from "../types";
 
 export const getVeterinarians = async (req: Request, res: Response) => {
     try {
-        const veterinarians: Veterinarian[] =
-            await veterinarianService.getAll();
+        const { role, clinic_id } = (req as AuthenticatedRequest).user;
+        const veterinarians: Veterinarian[] = await veterinarianService.getAll(role, clinic_id);
 
         return ApiResponse.success(res, veterinarians);
     } catch (error) {
@@ -22,9 +23,8 @@ export const getVeterinarianById = async (req: Request, res: Response) => {
             return ApiResponse.badRequest(res, "Veterinarian ID is required");
         }
 
-        const veterinarian: Veterinarian = await veterinarianService.getById(
-            Number(veterinarianId),
-        );
+        const { role, clinic_id } = (req as AuthenticatedRequest).user;
+        const veterinarian: Veterinarian = await veterinarianService.getById(Number(veterinarianId), role, clinic_id);
 
         return ApiResponse.success(res, veterinarian);
     } catch (error) {
@@ -43,8 +43,8 @@ export const getVeterinariansByClinicId = async (
             return ApiResponse.badRequest(res, "Clinic ID is required");
         }
 
-        const veterinarians: Veterinarian[] =
-            await veterinarianService.getByClinicId(Number(clinicId));
+        const { role, clinic_id } = (req as AuthenticatedRequest).user;
+        const veterinarians: Veterinarian[] = await veterinarianService.getByClinicId(Number(clinicId), role, clinic_id);
 
         return ApiResponse.success(res, veterinarians);
     } catch (error) {
@@ -65,8 +65,8 @@ export const getVeterinariansByFullName = async (
             ? String(req.query.lastName)
             : undefined;
 
-        const veterinarians: Veterinarian[] =
-            await veterinarianService.getByFullName(firstName, lastName);
+        const { role, clinic_id } = (req as AuthenticatedRequest).user;
+        const veterinarians: Veterinarian[] = await veterinarianService.getByFullName(firstName, lastName, role, clinic_id);
 
         return ApiResponse.success(res, veterinarians);
     } catch (error) {
@@ -76,9 +76,8 @@ export const getVeterinariansByFullName = async (
 
 export const createVeterinarian = async (req: Request, res: Response) => {
     try {
-        const veterinarian: Veterinarian = await veterinarianService.create(
-            req.body,
-        );
+        const { role, clinic_id } = (req as AuthenticatedRequest).user;
+        const veterinarian: Veterinarian = await veterinarianService.create(req.body, role, clinic_id);
 
         return ApiResponse.success(res, veterinarian, 201);
     } catch (error) {
@@ -94,10 +93,8 @@ export const updateVeterinarian = async (req: Request, res: Response) => {
             return ApiResponse.badRequest(res, "Veterinarian ID is required");
         }
 
-        const veterinarian: Veterinarian = await veterinarianService.update(
-            Number(veterinarianId),
-            req.body,
-        );
+        const { role, clinic_id } = (req as AuthenticatedRequest).user;
+        const veterinarian: Veterinarian = await veterinarianService.update(Number(veterinarianId), req.body, role, clinic_id);
 
         return ApiResponse.success(res, veterinarian);
     } catch (error) {
@@ -122,11 +119,8 @@ export const setVeterinarianIsPresent = async (
             return ApiResponse.badRequest(res, "is_present field is required");
         }
 
-        const veterinarian: Veterinarian =
-            await veterinarianService.setIsPresent(
-                Number(veterinarianId),
-                isPresent,
-            );
+        const { role, clinic_id } = (req as AuthenticatedRequest).user;
+        const veterinarian: Veterinarian = await veterinarianService.setIsPresent(Number(veterinarianId), isPresent, role, clinic_id);
 
         return ApiResponse.success(res, veterinarian);
     } catch (error) {
@@ -142,9 +136,8 @@ export const deleteVeterinarian = async (req: Request, res: Response) => {
             return ApiResponse.badRequest(res, "Veterinarian ID is required");
         }
 
-        const veterinarian: Veterinarian = await veterinarianService.delete(
-            Number(veterinarianId),
-        );
+        const { role, clinic_id } = (req as AuthenticatedRequest).user;
+        const veterinarian: Veterinarian = await veterinarianService.delete(Number(veterinarianId), role, clinic_id);
 
         return ApiResponse.success(res, veterinarian);
     } catch (error) {

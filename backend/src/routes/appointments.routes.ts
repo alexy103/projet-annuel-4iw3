@@ -76,6 +76,6 @@ appointmentsRouter.patch(
 appointmentsRouter.delete(
   "/:appointmentId",
   requireApiKey,
-  requireAuth(),
+  requireAuth("admin", "user"),
   deleteAppointment,
 );

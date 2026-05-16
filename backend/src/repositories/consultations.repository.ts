@@ -22,6 +22,20 @@ class ConsultationRepository extends BaseRepository<Consultation, CreateConsulta
   }
 
   /**
+   * Request to get consultations by clinic id (via veterinarian join)
+   * @param clinicId
+   */
+  async findByClinicId(clinicId: number): Promise<Consultation[]> {
+    const result = await db.query<Consultation>(
+      `SELECT c.* FROM ${this.table} c
+       INNER JOIN veterinarians v ON c.veterinarian_id = v.id
+       WHERE v.clinic_id = $1`,
+      [clinicId],
+    );
+    return result.rows;
+  }
+
+  /**
    * Request to get consultations by veterinarian id
    * @param veterinarianId
    */

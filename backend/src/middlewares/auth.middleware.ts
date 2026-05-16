@@ -50,6 +50,7 @@ export const requireAuth = (...allowedRoles: string[]) => {
       (req as AuthenticatedRequest).user = {
         userId: decoded.userId,
         role: userRole.label,
+        ...(user.clinic_id !== undefined && { clinic_id: user.clinic_id }),
       };
       next();
     } catch {
