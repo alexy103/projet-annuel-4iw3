@@ -1,6 +1,7 @@
 import { AppError } from "../types";
 import {
   appointmentsRepository,
+  availabilitiesRepository,
   consultationsRepository,
   usersRepository,
   animalsRepository,
@@ -8,9 +9,56 @@ import {
   appointmentReasonsRepository,
 } from "../repositories";
 import {
-  Appointment, CreateAppointmentPayload, UpdateAppointmentPayload, User, Animal, Clinic, AppointmentReason,
+  Appointment, Availability, CreateAppointmentPayload, UpdateAppointmentPayload, User, Animal, Clinic, AppointmentReason,
   Consultation
 } from "../schemas";
+
+const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+function validateSlot(date: Date | string, time: string, availability: Availability): void {
+  const rules = availability.slot_rules as { break?: { start: number; end: number }; interval: number };
+
+  const [h = 0, m = 0] = time.split(":").map(Number);
+  const totalMin = h * 60 + m;
+  const openMin = availability.opening * 60;
+  const closeMin = availability.closing * 60;
+  const interval = rules.interval;
+
+  if (totalMin < openMin || totalMin + interval > closeMin) {
+    throw new AppError(
+      `Time ${time} is outside clinic hours (${availability.opening}:00 - ${availability.closing}:00)`,
+      400,
+    );
+  }
+
+  if (rules.break) {
+    const breakStart = rules.break.start * 60;
+    const breakEnd = rules.break.end * 60;
+    if (totalMin >= breakStart && totalMin < breakEnd) {
+      throw new AppError(`Time ${time} falls during the clinic break`, 400);
+    }
+  }
+
+  if ((totalMin - openMin) % interval !== 0) {
+    throw new AppError(
+      `Time ${time} is not aligned with the clinic's slot interval (${interval} min)`,
+      400,
+    );
+  }
+}
+
+async function checkClinicAvailability(clinicId: number, date: Date | string, time: string): Promise<void> {
+  const dateObj = date instanceof Date ? date : new Date(date);
+  const dayName = DAYS[dateObj.getUTCDay()] as string;
+  const availabilities = await availabilitiesRepository.findByClinicId(clinicId);
+  const availability = availabilities.find((a) => a.day.toLowerCase() === dayName.toLowerCase());
+
+  if (!availability) {
+    throw new AppError(`Clinic is not available on ${dayName}`, 400);
+  }
+
+  validateSlot(date, time, availability);
+}
 
 export const appointmentService = {
   async getAll(callerId: number, role: string): Promise<Appointment[]> {
@@ -54,6 +102,8 @@ export const appointmentService = {
     const existingReason: AppointmentReason = await appointmentReasonsRepository.findById(data.reason_id);
     if (!existingReason) throw new AppError("Appointment reason not found", 404);
 
+    await checkClinicAvailability(data.clinic_id, data.date, data.time);
+
     return appointmentsRepository.create(data);
   },
 
@@ -79,6 +129,13 @@ export const appointmentService = {
     if (data.reason_id) {
       const existingReason: AppointmentReason = await appointmentReasonsRepository.findById(data.reason_id);
       if (!existingReason) throw new AppError("Appointment reason not found", 404);
+    }
+
+    if (data.clinic_id !== undefined || data.date !== undefined || data.time !== undefined) {
+      const clinicId = data.clinic_id ?? existingAppointment.clinic_id;
+      const date = data.date ?? existingAppointment.date;
+      const time = data.time ?? existingAppointment.time;
+      await checkClinicAvailability(clinicId, date, time);
     }
 
     return appointmentsRepository.update(appointmentId, data);
