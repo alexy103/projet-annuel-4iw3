@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { requireApiKey, requireAuth } from "../middlewares";
+import { requireApiKey, requireAuth, uploadAnimalPicture } from "../middlewares";
 import {
   assignMicroshipToAnimal,
   createAnimal,
@@ -12,6 +12,7 @@ import {
   toggleAnimalIsDeceased,
   toggleAnimalIsShared,
   updateAnimal,
+  uploadAnimalProfilePicture,
 } from "../controllers";
 
 export const animalsRouter: Router = Router();
@@ -54,6 +55,14 @@ animalsRouter.patch(
   requireApiKey,
   requireAuth("admin", "user"),
   assignMicroshipToAnimal,
+);
+
+animalsRouter.patch(
+  "/:animalId/profile-picture",
+  requireApiKey,
+  requireAuth("admin", "user"),
+  uploadAnimalPicture,
+  uploadAnimalProfilePicture,
 );
 
 animalsRouter.delete("/:animalId", requireApiKey, requireAuth("admin", "user"), deleteAnimal);

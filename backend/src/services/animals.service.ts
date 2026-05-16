@@ -112,6 +112,13 @@ export const animalService = {
     return animalsRepository.updateIsDeceased(animalId, isDeceased);
   },
 
+  async uploadProfilePicture(animalId: number, picturePath: string, callerId: number, role: string): Promise<Animal> {
+    const existingAnimal: Animal = await animalsRepository.findById(animalId);
+    if (!existingAnimal) throw new AppError("Animal not found", 404);
+    if (role === "user" && existingAnimal.user_id !== callerId) throw new AppError("Access denied", 403);
+    return animalsRepository.updateProfilePicture(animalId, picturePath);
+  },
+
   async delete(animalId: number, callerId: number, role: string): Promise<Animal> {
     const existingAnimal: Animal = await animalsRepository.findById(animalId);
     if (!existingAnimal) throw new AppError("Animal not found", 404);

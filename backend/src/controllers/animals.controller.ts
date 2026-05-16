@@ -140,6 +140,21 @@ export const toggleAnimalIsDeceased = async (req: Request, res: Response) => {
     }
 };
 
+export const uploadAnimalProfilePicture = async (req: Request, res: Response) => {
+    try {
+        const animalId: string | undefined = req.params.animalId;
+        if (!animalId) return ApiResponse.badRequest(res, "Animal ID is required");
+        if (!req.file) return ApiResponse.badRequest(res, "No file uploaded");
+
+        const { userId, role } = (req as AuthenticatedRequest).user;
+        const picturePath = `/uploads/animals/${req.file.filename}`;
+        const animal: Animal = await animalService.uploadProfilePicture(Number(animalId), picturePath, userId, role);
+        return ApiResponse.success(res, animal);
+    } catch (error) {
+        return ApiResponse.getError(res, error);
+    }
+};
+
 export const deleteAnimal = async (req: Request, res: Response) => {
     try {
         const animalId: string | undefined = req.params.animalId;
