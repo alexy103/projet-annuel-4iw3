@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import ApiResponse from "../utils/api-responses.utils";
-import { User } from "../schemas";
+import { RegisterPayloadSchema, User } from "../schemas";
 import { authService } from "../services";
 import { AuthenticatedRequest } from "../types";
 
@@ -27,7 +27,11 @@ export const login = async (req: Request, res: Response) => {
 
 export const register = async (req: Request, res: Response) => {
   try {
-    const user = await authService.register(req.body);
+    const parsed = RegisterPayloadSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return ApiResponse.badRequest(res, parsed.error.issues[0]?.message ?? "Invalid payload");
+    }
+    const user = await authService.register(parsed.data);
     return ApiResponse.success(res, user);
   } catch (error) {
     return ApiResponse.getError(res, error);
