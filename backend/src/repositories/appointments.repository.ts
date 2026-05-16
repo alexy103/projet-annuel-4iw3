@@ -57,7 +57,24 @@ class AppointmentRepository extends BaseRepository<Appointment, CreateAppointmen
   }
 
   /**
-   * Request to update is_completed status
+   * Count booked appointments for a given clinic slot, optionally excluding one appointment
+   * @param clinicId
+   * @param date
+   * @param time
+   * @param excludeId
+   */
+  async countBySlot(clinicId: number, date: string, time: string, excludeId?: number): Promise<number> {
+    const result = await db.query<{ count: string }>(
+      `SELECT COUNT(*) as count FROM ${this.table}
+       WHERE clinic_id = $1 AND date = $2 AND time = $3
+       AND ($4::int IS NULL OR id != $4)`,
+      [clinicId, date, time, excludeId ?? null],
+    );
+    return Number(result.rows[0]?.count ?? 0);
+  }
+
+  /**
+   * Update is_completed status of an appointment
    * @param appointmentId
    * @param isCompleted
    */

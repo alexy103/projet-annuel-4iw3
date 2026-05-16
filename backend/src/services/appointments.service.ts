@@ -47,7 +47,7 @@ function validateSlot(date: Date | string, time: string, availability: Availabil
   }
 }
 
-async function checkClinicAvailability(clinicId: number, date: Date | string, time: string): Promise<void> {
+async function checkClinicAvailability(clinicId: number, date: Date | string, time: string): Promise<{ capacity: number }> {
   const dateObj = date instanceof Date ? date : new Date(date);
   const dayName = DAYS[dateObj.getUTCDay()] as string;
   const availabilities = await availabilitiesRepository.findByClinicId(clinicId);
@@ -58,6 +58,9 @@ async function checkClinicAvailability(clinicId: number, date: Date | string, ti
   }
 
   validateSlot(date, time, availability);
+
+  const rules = availability.slot_rules as { break?: { start: number; end: number }; interval: number; capacity?: number };
+  return { capacity: rules.capacity ?? 1 };
 }
 
 export const appointmentService = {
@@ -102,7 +105,11 @@ export const appointmentService = {
     const existingReason: AppointmentReason = await appointmentReasonsRepository.findById(data.reason_id);
     if (!existingReason) throw new AppError("Appointment reason not found", 404);
 
-    await checkClinicAvailability(data.clinic_id, data.date, data.time);
+    const { capacity } = await checkClinicAvailability(data.clinic_id, data.date, data.time);
+
+    const dateStr = (data.date as Date).toISOString().substring(0, 10);
+    const booked = await appointmentsRepository.countBySlot(data.clinic_id, dateStr, data.time);
+    if (booked >= capacity) throw new AppError("This time slot is fully booked for this clinic", 409);
 
     return appointmentsRepository.create(data);
   },
@@ -134,8 +141,12 @@ export const appointmentService = {
     if (data.clinic_id !== undefined || data.date !== undefined || data.time !== undefined) {
       const clinicId = data.clinic_id ?? existingAppointment.clinic_id;
       const date = data.date ?? existingAppointment.date;
-      const time = data.time ?? existingAppointment.time;
-      await checkClinicAvailability(clinicId, date, time);
+      const time: string = data.time ?? existingAppointment.time;
+      const { capacity } = await checkClinicAvailability(clinicId, date, time);
+
+      const dateStr = date.toISOString().substring(0, 10);
+      const booked = await appointmentsRepository.countBySlot(clinicId, dateStr, time, appointmentId);
+      if (booked >= capacity) throw new AppError("This time slot is fully booked for this clinic", 409);
     }
 
     return appointmentsRepository.update(appointmentId, data);
