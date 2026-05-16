@@ -125,7 +125,7 @@ registry.registerPath({
         "application/json": {
           schema: zod.object({
             slot_rules: zod.unknown().openapi({
-              example: { break: { start: 12, end: 13 }, interval: 15 },
+              example: { break: { start: 12, end: 13 }, interval: 15, capacity: 1 },
             }),
           }),
         },

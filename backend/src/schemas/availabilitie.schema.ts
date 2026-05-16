@@ -54,6 +54,7 @@ const AvailabilityBaseSchema = zod
             end: 13
         },
         interval: 15,
+        capacity: 1,
       },
     }),
   })
