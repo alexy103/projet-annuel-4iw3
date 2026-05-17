@@ -36,7 +36,7 @@ const paginated = computed(() =>
       <div
         v-for="vet in paginated"
         :key="vet.id"
-        class="flex items-center gap-4 rounded-full bg-[#15D98B] px-4 py-3 text-white"
+        class="flex cursor-pointer items-center gap-4 rounded-full bg-[#15D98B] px-4 py-3 text-white transition-transform duration-200 hover:scale-[1.02]"
       >
         <div class="size-16 shrink-0 overflow-hidden rounded-full bg-gray-300">
           <img
@@ -63,7 +63,7 @@ const paginated = computed(() =>
       <button
         v-for="page in totalPages"
         :key="page"
-        class="flex size-8 items-center justify-center rounded-full text-sm font-bold transition-colors"
+        class="flex size-8 items-center justify-center rounded-full text-sm font-bold transition-all duration-200 hover:scale-110"
         :class="page === currentPage ? 'bg-[#15D98B] text-white' : 'bg-gray-200 text-black'"
         @click="currentPage = page"
       >
