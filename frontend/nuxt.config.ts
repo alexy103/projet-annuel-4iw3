@@ -13,7 +13,11 @@ export default defineNuxtConfig({
     "nuxt-qrcode",
     "@nuxt/image",
     "@pinia/nuxt",
+    "@nuxt/ui",
   ],
+  ui: {
+    colorMode: false,
+  },
   fonts: {
     families: [
       {

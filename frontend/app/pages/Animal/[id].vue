@@ -55,7 +55,7 @@ const submitEdit = () => {
       </div>
     </figure>
 
-    <BaseSection title="À venir" action="Tout voir">
+    <BaseSection title="À venir" action="Tout voir" link="/calendar">
       <div class="-mx-4 flex gap-2 overflow-x-auto px-4">
         <Appointment v-for="i in 4" />
       </div>
