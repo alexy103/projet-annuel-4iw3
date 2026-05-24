@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "@nuxt/ui";
 @theme {
   --font-jost: "Jost", sans-serif;
   --font-alt: "Luckiest Guy";
