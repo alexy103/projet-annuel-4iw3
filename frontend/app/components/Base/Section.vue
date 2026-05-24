@@ -12,6 +12,9 @@ defineProps({
   action: {
     type: String,
   },
+  link: {
+    type: String,
+  },
   plus: {
     type: Boolean,
     default: false,
@@ -31,11 +34,25 @@ defineProps({
       >
         {{ title }}
       </h2>
-      <BaseButton>
-        <Icon v-if="plus" name="material-symbols:add-rounded" class="size-5">
-        </Icon>
-        {{ action }}</BaseButton
-      >
+      <NuxtLink v-if="link" :to="link">
+        <BaseButton>
+          <Icon
+            v-if="plus"
+            name="material-symbols:add-rounded"
+            class="size-5"
+          ></Icon>
+          {{ action }}
+        </BaseButton>
+      </NuxtLink>
+
+      <BaseButton v-else>
+        <Icon
+          v-if="plus"
+          name="material-symbols:add-rounded"
+          class="size-5"
+        ></Icon>
+        {{ action }}
+      </BaseButton>
     </div>
 
     <h2
