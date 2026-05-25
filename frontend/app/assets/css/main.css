@@ -40,3 +40,11 @@
     @apply rounded-full border border-black px-3;
   }
 }
+
+:root {
+  --ui-text: var(--color-black);
+  --ui-text-muted: var(--color-black);
+  --ui-text-toned: var(--color-black);
+  --ui-text-dimmed: var(--color-black);
+  --ui-text-highlighted: var(--color-black);
+}
