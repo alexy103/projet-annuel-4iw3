@@ -13,8 +13,8 @@ defineProps<{
   >
     <p class="text-lg font-bold">Scooby</p>
     <div class="flex-1 text-center">
-      <p v-if="today" class="font-bold">14h30</p>
-      <p v-else class="font-bold">15/07/2026</p>
+      <p v-if="today" class="font-bold">Aujourd'hui - 14h30</p>
+      <p v-else class="font-bold">15/07/2026 - 16h00</p>
       <p>Clinique Paul Picquet</p>
     </div>
     <p>Vaccin</p>
