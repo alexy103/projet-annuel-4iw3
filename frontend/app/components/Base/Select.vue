@@ -5,6 +5,7 @@ const props = defineProps<{
   modelValue?: string | null;
   options: string[];
   disabled?: boolean;
+  addClass?: string;
 }>();
 
 const emit = defineEmits<{
@@ -33,6 +34,7 @@ const handleChange = (event: Event) => {
       :id="props.id"
       :value="props.modelValue ?? ''"
       :disabled="props.disabled"
+      :class="props.addClass"
       class="min-w-40 cursor-pointer rounded-full border px-2 shadow focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
       @change="handleChange"
     >
