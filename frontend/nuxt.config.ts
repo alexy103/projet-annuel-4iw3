@@ -20,6 +20,7 @@ export default defineNuxtConfig({
     public: {
       apiUrl: process.env.NUXT_PUBLIC_API_URL,
       apiKey: process.env.NUXT_PUBLIC_API_KEY,
+      backendUrl: process.env.NUXT_PUBLIC_BACKEND_URL,
     },
   },
   ui: {

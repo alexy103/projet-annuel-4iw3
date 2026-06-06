@@ -3,8 +3,9 @@ const props = defineProps<{
   label?: string;
   placeholder?: string;
   type?: string;
-  modelValue?: string;
+  modelValue?: string | number | null;
   small?: boolean;
+  disabled?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -12,8 +13,8 @@ const emit = defineEmits<{
 }>();
 
 const inputValue = computed({
-  get: () => props.modelValue || "",
-  set: (value: string) => emit("update:modelValue", value),
+  get: () => props.modelValue ?? "",
+  set: (value: string | number) => emit("update:modelValue", String(value)),
 });
 </script>
 
@@ -22,13 +23,16 @@ const inputValue = computed({
     <label class="mb-1 block text-center text-sm" v-if="label">
       {{ label }}
     </label>
+
     <input
       v-model="inputValue"
       :placeholder="placeholder"
+      :disabled="disabled"
       :class="[
         'input bg-background font-normal shadow placeholder:text-gray-400 focus:outline-none',
         inputValue ? 'text-black' : 'text-gray-400',
         small ? 'w-16' : 'w-full',
+        disabled ? 'cursor-not-allowed opacity-50' : '',
       ]"
       :type="type || 'text'"
     />

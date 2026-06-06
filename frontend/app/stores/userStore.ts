@@ -1,7 +1,7 @@
 type Animal = {
   id: number;
   name: string;
-  image: string;
+  image: string | null;
 };
 
 type ApiAnimal = {
@@ -38,6 +38,20 @@ export const useUserStore = defineStore("user", () => {
       Authorization: `Bearer ${accessToken}`,
       "Content-Type": "application/json",
     };
+  };
+
+  const getImageUrl = (path?: string | null) => {
+    if (!path) {
+      return null;
+    }
+
+    if (path.startsWith("http")) {
+      return path;
+    }
+
+    const config = useRuntimeConfig();
+
+    return `${config.public.backendUrl}${path}`;
   };
 
   const loadUserFromStorage = () => {
@@ -99,11 +113,12 @@ export const useUserStore = defineStore("user", () => {
       animals.value = result.data.map((animal: ApiAnimal) => ({
         id: animal.id,
         name: animal.name,
-        image:
-          animal.profile_picture_url ||
+        image: getImageUrl(
           animal.profile_picture ||
-          animal.image ||
-          "/kyky.jpg",
+            animal.profile_picture_url ||
+            animal.image ||
+            null,
+        ),
       }));
     } catch (error) {
       errorMessage.value =
@@ -116,6 +131,16 @@ export const useUserStore = defineStore("user", () => {
   };
 
   const completeOnboarding = async () => {
+    // Plus tard, tu pourras appeler ton API ici :
+    // await $fetch("/api/me/onboarding", {
+    //   method: "PATCH",
+    //   body: {
+    //     onboardingCompleted: true,
+    //     notificationsPush: notificationsPush.value,
+    //     nightMode: nightMode.value,
+    //   },
+    // });
+
     errorMessage.value = "";
     loadUserFromStorage();
 
@@ -163,6 +188,8 @@ export const useUserStore = defineStore("user", () => {
     animals.value = [];
     errorMessage.value = "";
 
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("refreshToken");
     localStorage.removeItem("userId");
     localStorage.removeItem("roleId");
     localStorage.removeItem("firstName");
