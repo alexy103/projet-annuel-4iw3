@@ -63,7 +63,7 @@ const submitEdit = () => {
 
     <div class="md:flex md:items-stretch md:gap-16">
       <BaseSection title="Carnet de santé" color="blue">
-        <div class="grid grid-cols-2 gap-4 md:w-fit">
+        <div class="grid grid-cols-2 justify-items-center gap-4 md:w-fit">
           <AnimalHealthGraph type="weight" />
           <AnimalHealthData type="weight" />
           <AnimalHealthData type="size" />

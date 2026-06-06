@@ -2,6 +2,8 @@
 const id = 1;
 
 const userStore = useUserStore();
+
+const showNewApt = ref(false);
 </script>
 
 <template>
@@ -16,7 +18,8 @@ const userStore = useUserStore();
         </NuxtLink>
         <Icon
           name="solar:calendar-add-outline"
-          class="ml-2 size-8 text-black"
+          class="ml-2 size-8 cursor-pointer text-black"
+          @click="showNewApt = true"
         />
       </div>
       <ul
@@ -51,5 +54,36 @@ const userStore = useUserStore();
         </li>
       </ul>
     </div>
+    <BasePopup v-model="showNewApt" fit>
+      <div class="w-full max-w-sm">
+        <h2 class="mb-4 text-center font-bold">Prendre un rendez-vous</h2>
+
+        <div class="mb-4 flex gap-4">
+          <BaseInput label="Date" type="date" />
+          <BaseInput label="Heure" type="time" />
+        </div>
+
+        <BaseSelect
+          class="mb-4"
+          id="species"
+          label="Espèce"
+          :options="['1', '2']"
+          addClass="w-full"
+        />
+
+        <label class="mb-1 block text-center text-sm">Motif</label>
+        <textarea
+          class="input bg-background min-h-24 w-full resize-none rounded-xl! px-4 py-2 text-sm font-normal shadow placeholder:text-gray-400 focus:outline-none"
+          rows="3"
+        />
+
+        <button
+          type="button"
+          class="text-background mt-4 flex w-full cursor-pointer items-center justify-center rounded-xl bg-green-700 py-1 font-bold shadow-lg transition-colors hover:bg-green-900"
+        >
+          Confirmer
+        </button>
+      </div>
+    </BasePopup>
   </div>
 </template>
