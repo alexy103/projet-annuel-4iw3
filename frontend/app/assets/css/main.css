@@ -40,3 +40,23 @@
     @apply rounded-full border border-black px-3;
   }
 }
+
+:root {
+  --ui-text-dimmed: inherit;
+  --ui-text-muted: inherit;
+  --ui-text-toned: inherit;
+  --ui-text: inherit;
+  --ui-text-highlighted: inherit;
+  --ui-text-inverted: inherit;
+
+  --ui-bg: transparent;
+  --ui-bg-muted: transparent;
+  --ui-bg-elevated: transparent;
+  --ui-bg-accented: transparent;
+  --ui-bg-inverted: transparent;
+
+  --ui-border: transparent;
+  --ui-border-muted: transparent;
+  --ui-border-accented: transparent;
+  --ui-border-inverted: transparent;
+}
