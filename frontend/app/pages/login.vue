@@ -35,6 +35,8 @@ const handleLogin = async () => {
 
     localStorage.setItem("accessToken", result.data.accessToken);
     localStorage.setItem("refreshToken", result.data.refreshToken);
+    localStorage.setItem("userId", String(result.data.userId));
+    localStorage.setItem("roleId", String(result.data.roleId));
 
     await navigateTo("/");
   } catch (error) {

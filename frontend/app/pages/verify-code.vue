@@ -3,18 +3,19 @@ definePageMeta({
   layout: "auth",
 });
 
-const route = useRoute();
-
 const email = ref("");
 const code = ref("");
-
-onMounted(() => {
-  email.value = sessionStorage.getItem("registerEmail") || "";
-});
 
 const errorMessage = ref("");
 const successMessage = ref("");
 const isLoading = ref(false);
+
+onMounted(() => {
+  email.value =
+    sessionStorage.getItem("registerEmail") ||
+    sessionStorage.getItem("resetPasswordEmail") ||
+    "";
+});
 
 const handleVerifyCode = async () => {
   errorMessage.value = "";
@@ -56,7 +57,9 @@ const handleVerifyCode = async () => {
       throw new Error(verifyResult.error || "Code de vérification invalide");
     }
 
-    const password = sessionStorage.getItem("registerPassword");
+    const password =
+      sessionStorage.getItem("registerPassword") ||
+      sessionStorage.getItem("resetPasswordNewPassword");
 
     if (!password) {
       await navigateTo("/login");
@@ -83,9 +86,27 @@ const handleVerifyCode = async () => {
 
     localStorage.setItem("accessToken", loginResult.data.accessToken);
     localStorage.setItem("refreshToken", loginResult.data.refreshToken);
+    localStorage.setItem("userId", String(loginResult.data.userId));
+    localStorage.setItem("roleId", String(loginResult.data.roleId));
+
+    const registerFirstName = sessionStorage.getItem("registerFirstName");
+    const registerLastName = sessionStorage.getItem("registerLastName");
+
+    if (registerFirstName) {
+      localStorage.setItem("firstName", registerFirstName);
+    }
+
+    if (registerLastName) {
+      localStorage.setItem("lastName", registerLastName);
+    }
 
     sessionStorage.removeItem("registerEmail");
     sessionStorage.removeItem("registerPassword");
+    sessionStorage.removeItem("registerFirstName");
+    sessionStorage.removeItem("registerLastName");
+
+    sessionStorage.removeItem("resetPasswordEmail");
+    sessionStorage.removeItem("resetPasswordNewPassword");
 
     await navigateTo("/");
   } catch (error) {

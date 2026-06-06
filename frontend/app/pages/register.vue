@@ -17,6 +17,11 @@ const handleRegister = async () => {
   errorMessage.value = "";
   successMessage.value = "";
 
+  if (!firstName.value || !lastName.value || !email.value || !password.value) {
+    errorMessage.value = "Tous les champs sont obligatoires";
+    return;
+  }
+
   if (password.value !== confirmPassword.value) {
     errorMessage.value = "Les mots de passe ne correspondent pas";
     return;
@@ -49,6 +54,8 @@ const handleRegister = async () => {
 
     sessionStorage.setItem("registerEmail", email.value);
     sessionStorage.setItem("registerPassword", password.value);
+    sessionStorage.setItem("registerFirstName", firstName.value);
+    sessionStorage.setItem("registerLastName", lastName.value);
 
     await navigateTo("/verify-code");
   } catch (error) {

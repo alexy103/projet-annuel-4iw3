@@ -1,14 +1,35 @@
 <script setup lang="ts">
 const userStore = useUserStore();
 const profilePicture = ref<string | null>(null);
+const isLoading = ref(false);
+const isReady = ref(false);
 
 definePageMeta({
   // layout: "onboarding",
 });
 
+onMounted(async () => {
+  await userStore.fetchCurrentUser?.();
+  await userStore.fetchAnimals?.();
+
+  isReady.value = true;
+});
+
+onUnmounted(() => {
+  if (profilePicture.value) {
+    URL.revokeObjectURL(profilePicture.value);
+  }
+});
+
 const completeOnboarding = async () => {
-  await userStore.completeOnboarding();
-  setPageLayout("default");
+  isLoading.value = true;
+
+  try {
+    await userStore.completeOnboarding();
+    setPageLayout("default");
+  } finally {
+    isLoading.value = false;
+  }
 };
 
 const handleProfilePictureUpload = (event: Event) => {
@@ -17,12 +38,22 @@ const handleProfilePictureUpload = (event: Event) => {
 
   if (!file) return;
 
+  if (profilePicture.value) {
+    URL.revokeObjectURL(profilePicture.value);
+  }
+
   profilePicture.value = URL.createObjectURL(file);
 };
 </script>
 
 <template>
-  <div v-if="userStore.onboardingCompleted && userStore.animals.length > 0">
+  <div v-if="!isReady" class="flex h-screen items-center justify-center">
+    <Icon name="eos-icons:loading" class="text-grey-500 size-10 animate-spin" />
+  </div>
+
+  <div
+    v-else-if="userStore.onboardingCompleted && userStore.animals.length > 0"
+  >
     <h1 class="mt-2 mb-4 text-2xl font-bold">
       Bienvenue, {{ userStore.firstName }} !
     </h1>
@@ -33,15 +64,24 @@ const handleProfilePictureUpload = (event: Event) => {
       </div>
     </BaseSection>
 
-    <BaseSection title="Mes animaux" action="Ajouter un animal" color="blue">
+    <BaseSection
+      title="Mes animaux"
+      action="Ajouter un animal"
+      link="/add-animal"
+      color="blue"
+    >
       <div class="grid w-full grid-cols-2 justify-items-center gap-4">
-        <AnimalCard v-for="i in 4" :key="i" src="/kyky.jpg" />
+        <AnimalCard
+          v-for="animal in userStore.animals"
+          :key="animal.id"
+          :src="animal.image"
+        />
       </div>
     </BaseSection>
   </div>
 
   <div
-    v-else-if="userStore.onboardingCompleted"
+    v-else-if="userStore.onboardingCompleted && userStore.animals.length === 0"
     class="absolute top-1/2 left-1/2 min-w-90 -translate-1/2 space-y-4 text-center lg:space-y-8"
   >
     <h2 class="text-xl font-bold">
@@ -56,14 +96,9 @@ const handleProfilePictureUpload = (event: Event) => {
   </div>
 
   <div v-else class="space-y-4">
-    <h1 class="mt-2 text-2xl font-bold">Bienvenue par minous !</h1>
-
-    <h2 class="text-xl font-bold">Faisons connaissance...</h2>
-
-    <div class="flex items-center justify-around gap-4">
-      <BaseInput label="Prénom" :value="userStore.firstName" />
-      <BaseInput label="Nom" :value="userStore.lastName" />
-    </div>
+    <h1 class="mt-2 text-2xl font-bold">
+      Bienvenue par minous, {{ userStore.firstName }}
+    </h1>
 
     <h2 class="text-xl font-bold">Une photo ?</h2>
 
@@ -102,7 +137,7 @@ const handleProfilePictureUpload = (event: Event) => {
     </div>
 
     <BaseButton class="flex justify-center" @click="completeOnboarding">
-      Terminer
+      {{ isLoading ? "Chargement..." : "Terminer" }}
     </BaseButton>
   </div>
 </template>
