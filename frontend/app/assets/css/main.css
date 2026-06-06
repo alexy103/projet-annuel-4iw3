@@ -42,9 +42,21 @@
 }
 
 :root {
-  --ui-text: var(--color-black);
-  --ui-text-muted: var(--color-black);
-  --ui-text-toned: var(--color-black);
-  --ui-text-dimmed: var(--color-black);
-  --ui-text-highlighted: var(--color-black);
+  --ui-text-dimmed: inherit;
+  --ui-text-muted: inherit;
+  --ui-text-toned: inherit;
+  --ui-text: inherit;
+  --ui-text-highlighted: inherit;
+  --ui-text-inverted: inherit;
+
+  --ui-bg: transparent;
+  --ui-bg-muted: transparent;
+  --ui-bg-elevated: transparent;
+  --ui-bg-accented: transparent;
+  --ui-bg-inverted: transparent;
+
+  --ui-border: transparent;
+  --ui-border-muted: transparent;
+  --ui-border-accented: transparent;
+  --ui-border-inverted: transparent;
 }
