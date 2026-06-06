@@ -3,7 +3,7 @@ const userStore = useUserStore();
 const profilePicture = ref<string | null>(null);
 
 definePageMeta({
-  layout: "onboarding",
+  // layout: "onboarding",
 });
 
 const completeOnboarding = async () => {

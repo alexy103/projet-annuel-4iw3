@@ -8,16 +8,16 @@ export const useUserStore = defineStore("user", () => {
   const firstName = ref("John");
   const lastName = ref("Doe");
   const avatar = ref<string | null>(null);
-  const onboardingCompleted = ref(false);
+  const onboardingCompleted = ref(true);
   const notificationsPush = ref(true);
   const nightMode = ref(false);
 
   const animals = ref<Animal[]>([
-    // {
-    //   id: 1,
-    //   name: "Scooby",
-    //   image: "/scooby.png",
-    // },
+    {
+      id: 1,
+      name: "Scooby",
+      image: "/scooby.png",
+    },
   ]);
 
   const fullName = computed(() => {

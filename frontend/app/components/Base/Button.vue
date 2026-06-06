@@ -5,12 +5,18 @@ defineProps({
     validator: (value: string) => ["blue", "green", "white"].includes(value),
     default: "green",
   },
+  type: {
+    type: String,
+    validator: (value: string) => ["button", "submit", "reset"].includes(value),
+    default: "button",
+  },
 });
 </script>
 
 <template>
   <div>
     <button
+      :type="type"
       class="button text-background cursor-pointer font-normal shadow"
       :class="{
         'bg-blue-500': color === 'blue',

@@ -1,10 +1,34 @@
-<script setup>
+<script setup lang="ts">
 const route = useRoute();
 
 const id = route.params.id;
 
 const notificationsPush = ref(true);
 const nightMode = ref(false);
+
+const handleLogout = async () => {
+  const config = useRuntimeConfig();
+  const accessToken = localStorage.getItem("accessToken");
+
+  try {
+    if (accessToken) {
+      await fetch(`${config.public.apiUrl}/auth/logout`, {
+        method: "POST",
+        headers: {
+          "x-api-key": config.public.apiKey,
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+    }
+  } catch (error) {
+    console.error("Erreur lors de la déconnexion", error);
+  } finally {
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("refreshToken");
+
+    await navigateTo("/login");
+  }
+};
 </script>
 
 <template>
@@ -37,11 +61,14 @@ const nightMode = ref(false);
 
     <div class="flex items-center justify-center gap-4">
       <BaseButton class="flex justify-center">Enregistrer</BaseButton>
-      <NuxtLink to="/login">
-        <BaseButton class="flex justify-center" color="white"
-          >Déconnexion</BaseButton
-        >
-      </NuxtLink>
+
+      <BaseButton
+        class="flex justify-center"
+        color="white"
+        @click="handleLogout"
+      >
+        Déconnexion
+      </BaseButton>
     </div>
   </div>
 </template>

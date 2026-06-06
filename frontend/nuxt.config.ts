@@ -15,6 +15,13 @@ export default defineNuxtConfig({
     "@pinia/nuxt",
     "@nuxt/ui",
   ],
+  runtimeConfig: {
+    apiUrl: process.env.API_URL,
+    public: {
+      apiUrl: process.env.NUXT_PUBLIC_API_URL,
+      apiKey: process.env.NUXT_PUBLIC_API_KEY,
+    },
+  },
   ui: {
     colorMode: false,
   },
