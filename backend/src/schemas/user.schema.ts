@@ -97,6 +97,21 @@ export const UserSchema = UserBaseSchema.extend({
 
 registry.register("User", UserSchema);
 
+export const UserPublicSchema = UserSchema.omit({
+  password_hash: true,
+  email_verification_code: true,
+  email_verification_expires_at: true,
+  password_temp_expires_at: true,
+});
+
+registry.register("UserPublic", UserPublicSchema);
+
 export type User = zod.infer<typeof UserSchema>;
+export type UserPublic = zod.infer<typeof UserPublicSchema>;
 export type CreateUserPayload = zod.infer<typeof CreateUserPayloadSchema>;
 export type UpdateUserPayload = zod.infer<typeof UpdateUserPayloadSchema>;
+
+export function toPublicUser(user: User): UserPublic {
+  const { password_hash, email_verification_code, email_verification_expires_at, password_temp_expires_at, ...publicUser } = user;
+  return publicUser;
+}

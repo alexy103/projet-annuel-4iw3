@@ -1,13 +1,13 @@
 import { Request, Response } from "express";
 import ApiResponse from "../utils/api-responses.utils";
-import { User, UserPermission } from "../schemas";
+import { UserPublic, UserPermission } from "../schemas";
 import { userService } from "../services";
 import {AuthenticatedRequest} from "../types";
 
 export const getUsers = async (req: Request, res: Response) => {
   try {
     const isActivated: string = String(req.query.active);
-    const users: User[] = await userService.getAll(isActivated);
+    const users: UserPublic[] = await userService.getAll(isActivated);
     return ApiResponse.success(res, users);
   } catch (error) {
     return ApiResponse.getError(res, error);
@@ -17,7 +17,7 @@ export const getUsers = async (req: Request, res: Response) => {
 export const getMe = async (req: Request, res: Response) => {
   try {
     const { userId } = (req as AuthenticatedRequest).user;
-    const user: User = await userService.getById(userId);
+    const user: UserPublic = await userService.getById(userId);
     return ApiResponse.success(res, user);
   } catch (error) {
     return ApiResponse.getError(res, error);
@@ -31,7 +31,7 @@ export const getUserById = async (req: Request, res: Response) => {
       return ApiResponse.badRequest(res, "User ID is required");
     }
 
-    const user: User = await userService.getById(Number(userId));
+    const user: UserPublic = await userService.getById(Number(userId));
     return ApiResponse.success(res, user);
   } catch (error) {
     return ApiResponse.getError(res, error);
@@ -40,7 +40,7 @@ export const getUserById = async (req: Request, res: Response) => {
 
 export const createUser = async (req: Request, res: Response) => {
   try {
-    const user: User = await userService.create(req.body);
+    const user: UserPublic = await userService.create(req.body);
     return ApiResponse.success(res, user, 201);
   } catch (error) {
     return ApiResponse.getError(res, error);
@@ -55,7 +55,7 @@ export const updateUser = async (req: Request, res: Response) => {
     }
 
     const { userId: callerId, role } = (req as AuthenticatedRequest).user;
-    const user: User = await userService.update(Number(userId), req.body, callerId, role);
+    const user: UserPublic = await userService.update(Number(userId), req.body, callerId, role);
     return ApiResponse.success(res, user);
   } catch (error) {
     return ApiResponse.getError(res, error);
@@ -69,7 +69,7 @@ export const updateUserEmailVerified = async (req: Request, res: Response) => {
       return ApiResponse.badRequest(res, "User ID is required");
     }
 
-    const user: User = await userService.updateEmailVerified(Number(userId));
+    const user: UserPublic = await userService.updateEmailVerified(Number(userId));
     return ApiResponse.success(res, user);
   } catch (error) {
     return ApiResponse.getError(res, error);
@@ -90,7 +90,7 @@ export const updateUserClinicId = async (req: Request, res: Response) => {
       );
     }
 
-    const user: User = await userService.setClinic(
+    const user: UserPublic = await userService.setClinic(
       Number(userId),
       clinicId,
     );
@@ -116,7 +116,7 @@ export const toggleUserActivation = async (req: Request, res: Response) => {
       );
     }
 
-    const user: User = await userService.setActivation(
+    const user: UserPublic = await userService.setActivation(
         Number(userId),
         isActivated,
     );
@@ -134,7 +134,7 @@ export const uploadUserProfilePicture = async (req: Request, res: Response) => {
 
     const { userId: callerId, role } = (req as AuthenticatedRequest).user;
     const picturePath = `/uploads/users/${req.file.filename}`;
-    const user: User = await userService.uploadProfilePicture(Number(userId), picturePath, callerId, role);
+    const user: UserPublic = await userService.uploadProfilePicture(Number(userId), picturePath, callerId, role);
     return ApiResponse.success(res, user);
   } catch (error) {
     return ApiResponse.getError(res, error);
@@ -147,7 +147,7 @@ export const completeUserOnboarding = async (req: Request, res: Response) => {
     if (!userId) return ApiResponse.badRequest(res, "User ID is required");
 
     const { userId: callerId, role } = (req as AuthenticatedRequest).user;
-    const user: User = await userService.completeOnboarding(Number(userId), callerId, role);
+    const user: UserPublic = await userService.completeOnboarding(Number(userId), callerId, role);
     return ApiResponse.success(res, user);
   } catch (error) {
     return ApiResponse.getError(res, error);
@@ -161,7 +161,7 @@ export const deleteUser = async (req: Request, res: Response) => {
       return ApiResponse.badRequest(res, "User ID is required");
     }
 
-    const user: User = await userService.delete(Number(userId));
+    const user: UserPublic = await userService.delete(Number(userId));
     return ApiResponse.success(res, user);
   } catch (error) {
     return ApiResponse.getError(res, error);

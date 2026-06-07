@@ -12,9 +12,9 @@ import {
 import {
   CreateUserPayloadSchema,
   UpdateUserPayloadSchema,
-
-  UserPermissionPayloadSchema, UserPermissionSchema,
-  UserSchema
+  UserPermissionPayloadSchema,
+  UserPermissionSchema,
+  UserPublicSchema,
 } from "../schemas";
 import { MessageResponseSchema } from "./openapi.schemas";
 
@@ -30,7 +30,7 @@ registry.registerPath({
     }),
   },
   responses: {
-    200: JsonResponse(zod.array(UserSchema), "List of users"),
+    200: JsonResponse(zod.array(UserPublicSchema), "List of users"),
     401: UnauthorizedResponse,
     403: ForbiddenResponse,
     404: NotFoundResponse,
@@ -45,7 +45,7 @@ registry.registerPath({
   tags: ["Users"],
   summary: "Get current authenticated user",
   responses: {
-    200: JsonResponse(UserSchema, "Current user"),
+    200: JsonResponse(UserPublicSchema, "Current user"),
     401: UnauthorizedResponse,
     500: ServerErrorResponse,
   },
@@ -63,7 +63,7 @@ registry.registerPath({
     }),
   },
   responses: {
-    200: JsonResponse(UserSchema, "User found"),
+    200: JsonResponse(UserPublicSchema, "User found"),
     401: UnauthorizedResponse,
     403: ForbiddenResponse,
     404: NotFoundResponse,
@@ -87,7 +87,7 @@ registry.registerPath({
     },
   },
   responses: {
-    201: JsonResponse(UserSchema, "User created"),
+    201: JsonResponse(UserPublicSchema, "User created"),
     400: BadRequest,
     401: UnauthorizedResponse,
     403: ForbiddenResponse,
@@ -116,7 +116,7 @@ registry.registerPath({
     },
   },
   responses: {
-    200: JsonResponse(UserSchema, "User updated"),
+    200: JsonResponse(UserPublicSchema, "User updated"),
     400: BadRequest,
     401: UnauthorizedResponse,
     403: ForbiddenResponse,
@@ -149,7 +149,7 @@ registry.registerPath({
     },
   },
   responses: {
-    200: JsonResponse(UserSchema, "User activation updated"),
+    200: JsonResponse(UserPublicSchema, "User activation updated"),
     400: BadRequest,
     401: UnauthorizedResponse,
     403: ForbiddenResponse,
@@ -182,7 +182,7 @@ registry.registerPath({
     },
   },
   responses: {
-    200: JsonResponse(UserSchema, "User activation updated"),
+    200: JsonResponse(UserPublicSchema, "User activation updated"),
     400: BadRequest,
     401: UnauthorizedResponse,
     403: ForbiddenResponse,
@@ -202,7 +202,7 @@ registry.registerPath({
     params: zod.object({ userId: zod.string() }),
   },
   responses: {
-    200: JsonResponse(UserSchema, "Onboarding completed"),
+    200: JsonResponse(UserPublicSchema, "Onboarding completed"),
     400: BadRequest,
     401: UnauthorizedResponse,
     403: ForbiddenResponse,
@@ -231,7 +231,7 @@ registry.registerPath({
     },
   },
   responses: {
-    200: JsonResponse(UserSchema, "User profile picture updated"),
+    200: JsonResponse(UserPublicSchema, "User profile picture updated"),
     400: BadRequest,
     401: UnauthorizedResponse,
     403: ForbiddenResponse,
@@ -252,7 +252,7 @@ registry.registerPath({
     }),
   },
   responses: {
-    200: JsonResponse(UserSchema, "User deleted"),
+    200: JsonResponse(UserPublicSchema, "User deleted"),
     400: BadRequest,
     401: UnauthorizedResponse,
     403: ForbiddenResponse,
