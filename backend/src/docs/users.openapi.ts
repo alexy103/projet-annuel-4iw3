@@ -41,6 +41,19 @@ registry.registerPath({
 registry.registerPath({
   method: "get",
   security: [{ ApiKeyAuth: [] }, { BearerAuth: [] }],
+  path: "/users/me",
+  tags: ["Users"],
+  summary: "Get current authenticated user",
+  responses: {
+    200: JsonResponse(UserSchema, "Current user"),
+    401: UnauthorizedResponse,
+    500: ServerErrorResponse,
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  security: [{ ApiKeyAuth: [] }, { BearerAuth: [] }],
   path: "/users/{userId}",
   tags: ["Users"],
   summary: "Get user by id",

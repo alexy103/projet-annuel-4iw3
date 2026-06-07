@@ -4,7 +4,7 @@ import {
   completeUserOnboarding,
   createPermissionToUser,
   createUser, deletePermissionFromUser,
-  deleteUser, getPermissionsByUserId,
+  deleteUser, getMe, getPermissionsByUserId,
   getUserById,
   getUsers,
   toggleUserActivation,
@@ -17,6 +17,8 @@ import { UpdateUserPayloadSchema, CreateUserPayloadSchema } from "../schemas";
 export const usersRouter: Router = Router();
 
 usersRouter.get("/", requireApiKey, requireAuth("admin"), getUsers);
+
+usersRouter.get("/me", requireApiKey, requireAuth(), getMe);
 
 usersRouter.get("/:userId", requireApiKey, requireAuth("admin"), getUserById);
 

@@ -14,6 +14,16 @@ export const getUsers = async (req: Request, res: Response) => {
   }
 };
 
+export const getMe = async (req: Request, res: Response) => {
+  try {
+    const { userId } = (req as AuthenticatedRequest).user;
+    const user: User = await userService.getById(userId);
+    return ApiResponse.success(res, user);
+  } catch (error) {
+    return ApiResponse.getError(res, error);
+  }
+};
+
 export const getUserById = async (req: Request, res: Response) => {
   try {
     const userId: string | undefined = req.params.userId;
