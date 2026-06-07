@@ -32,9 +32,10 @@ export const heightRecordService = {
     return heightRecordsRepository.findByAnimalId(animalId);
   },
 
-  async create(data: CreateHeightRecordPayload): Promise<HeightRecord> {
+  async create(data: CreateHeightRecordPayload, callerId: number, role: string): Promise<HeightRecord> {
     const existingAnimal: Animal = await animalsRepository.findById(data.animal_id);
     if (!existingAnimal) throw new AppError("Animal not found", 404);
+    assertAnimalAccess(existingAnimal, callerId, role);
     return heightRecordsRepository.create(data);
   },
 

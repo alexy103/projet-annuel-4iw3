@@ -60,7 +60,8 @@ export const getCaresByTreatmentTypeId = async (req: Request, res: Response) => 
 
 export const createCare = async (req: Request, res: Response) => {
     try {
-        const care: Care = await careService.create(req.body);
+        const { userId, role } = (req as AuthenticatedRequest).user;
+        const care: Care = await careService.create(req.body, userId, role);
         return ApiResponse.success(res, care, 201);
     } catch (error) {
         return ApiResponse.getError(res, error);

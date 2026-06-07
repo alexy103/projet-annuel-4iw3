@@ -46,7 +46,8 @@ export const getWeightRecordsByAnimalId = async (req: Request, res: Response) =>
 
 export const createWeightRecord = async (req: Request, res: Response) => {
     try {
-        const record: WeightRecord = await weightRecordService.create(req.body);
+        const { userId, role } = (req as AuthenticatedRequest).user;
+        const record: WeightRecord = await weightRecordService.create(req.body, userId, role);
         return ApiResponse.success(res, record, 201);
     } catch (error) {
         return ApiResponse.getError(res, error);

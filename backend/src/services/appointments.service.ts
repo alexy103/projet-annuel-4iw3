@@ -84,7 +84,12 @@ export const appointmentService = {
     return appointments;
   },
 
-  async getByAnimalId(animalId: number, role: string, callerClinicId?: number): Promise<Appointment[]> {
+  async getByAnimalId(animalId: number, callerId: number, role: string, callerClinicId?: number): Promise<Appointment[]> {
+    if (role === "user") {
+      const animal = await animalsRepository.findById(animalId);
+      if (!animal) throw new AppError("Animal not found", 404);
+      if (animal.user_id !== callerId) throw new AppError("Access denied", 403);
+    }
     const appointments = await appointmentsRepository.findByAnimalId(animalId);
     if (role === "clinic") return appointments.filter(a => a.clinic_id === callerClinicId);
     return appointments;
@@ -95,18 +100,22 @@ export const appointmentService = {
     return appointmentsRepository.findByClinicId(clinicId);
   },
 
-  async getByReasonId(reasonId: number, role: string, callerClinicId?: number): Promise<Appointment[]> {
+  async getByReasonId(reasonId: number, callerId: number, role: string, callerClinicId?: number): Promise<Appointment[]> {
     const appointments = await appointmentsRepository.findByReasonId(reasonId);
     if (role === "clinic") return appointments.filter(a => a.clinic_id === callerClinicId);
+    if (role === "user") return appointments.filter(a => a.user_id === callerId);
     return appointments;
   },
 
-  async create(data: CreateAppointmentPayload): Promise<Appointment> {
+  async create(data: CreateAppointmentPayload, callerId: number, role: string): Promise<Appointment> {
+    if (role === "user" && data.user_id !== callerId) throw new AppError("Access denied", 403);
+
     const existingUser: User = await usersRepository.findById(data.user_id);
     if (!existingUser) throw new AppError("User not found", 404);
 
     const existingAnimal: Animal = await animalsRepository.findById(data.animal_id);
     if (!existingAnimal) throw new AppError("Animal not found", 404);
+    if (role === "user" && existingAnimal.user_id !== callerId) throw new AppError("Access denied", 403);
 
     const existingClinic: Clinic = await clinicsRepository.findById(data.clinic_id);
     if (!existingClinic) throw new AppError("Clinic not found", 404);
@@ -123,9 +132,10 @@ export const appointmentService = {
     return appointmentsRepository.create(data);
   },
 
-  async update(appointmentId: number, data: UpdateAppointmentPayload): Promise<Appointment> {
+  async update(appointmentId: number, data: UpdateAppointmentPayload, callerId: number, role: string): Promise<Appointment> {
     const existingAppointment: Appointment = await appointmentsRepository.findById(appointmentId);
     if (!existingAppointment) throw new AppError("Appointment not found", 404);
+    if (role === "user" && existingAppointment.user_id !== callerId) throw new AppError("Access denied", 403);
 
     if (data.user_id) {
       const existingUser: User = await usersRepository.findById(data.user_id);
@@ -135,6 +145,7 @@ export const appointmentService = {
     if (data.animal_id) {
       const existingAnimal: Animal = await animalsRepository.findById(data.animal_id);
       if (!existingAnimal) throw new AppError("Animal not found", 404);
+      if (role === "user" && existingAnimal.user_id !== callerId) throw new AppError("Access denied", 403);
     }
 
     if (data.clinic_id) {

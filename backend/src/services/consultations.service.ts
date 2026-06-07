@@ -13,27 +13,36 @@ import {
 } from "../schemas";
 
 export const consultationService = {
-  async getAll(role: string, callerClinicId?: number): Promise<Consultation[]> {
+  async getAll(callerId: number, role: string, callerClinicId?: number): Promise<Consultation[]> {
     if (role === "clinic") return consultationsRepository.findByClinicId(callerClinicId!);
+    if (role === "user") return consultationsRepository.findByUserId(callerId);
     return consultationsRepository.findAll();
   },
 
-  async getById(consultationId: number, role: string, callerClinicId?: number): Promise<Consultation> {
+  async getById(consultationId: number, callerId: number, role: string, callerClinicId?: number): Promise<Consultation> {
     const consultation = await consultationsRepository.findById(consultationId);
     if (!consultation) throw new AppError("Consultation not found", 404);
     if (role === "clinic") {
       const vet: Veterinarian = await veterinariansRepository.findById(consultation.veterinarian_id);
       if (vet.clinic_id !== callerClinicId) throw new AppError("Access denied", 403);
     }
+    if (role === "user") {
+      const appointment = await appointmentsRepository.findById(consultation.appointment_id);
+      if (!appointment || appointment.user_id !== callerId) throw new AppError("Access denied", 403);
+    }
     return consultation;
   },
 
-  async getByAppointmentId(appointmentId: number, role: string, callerClinicId?: number): Promise<Consultation> {
+  async getByAppointmentId(appointmentId: number, callerId: number, role: string, callerClinicId?: number): Promise<Consultation> {
     const consultation : Consultation | null = await consultationsRepository.findByAppointmentId(appointmentId);
     if (!consultation) throw new AppError("Consultation not found", 404);
     if (role === "clinic") {
       const vet: Veterinarian = await veterinariansRepository.findById(consultation.veterinarian_id);
       if (vet.clinic_id !== callerClinicId) throw new AppError("Access denied", 403);
+    }
+    if (role === "user") {
+      const appointment = await appointmentsRepository.findById(appointmentId);
+      if (!appointment || appointment.user_id !== callerId) throw new AppError("Access denied", 403);
     }
     return consultation;
   },
