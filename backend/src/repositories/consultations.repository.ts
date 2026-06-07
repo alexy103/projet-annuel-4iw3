@@ -47,6 +47,10 @@ class ConsultationRepository extends BaseRepository<Consultation, CreateConsulta
     return result.rows;
   }
 
+  /**
+   * Request to get consultations by user id (via appointment join)
+   * @param userId
+   */
   async findByUserId(userId: number): Promise<Consultation[]> {
     const result = await db.query<Consultation>(
       `SELECT c.* FROM ${this.table} c

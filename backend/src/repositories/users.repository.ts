@@ -161,6 +161,11 @@ export const usersRepository = {
     return result.rows;
   },
 
+  /**
+   * Request to get a specific permission for a user
+   * @param userId
+   * @param permissionId
+   */
   async findPermissionByPermissionId(
     userId: number,
     permissionId: number,
@@ -362,6 +367,10 @@ export const usersRepository = {
     return user;
   },
 
+  /**
+   * Request to mark user onboarding as completed
+   * @param userId
+   */
   async updateOnboardingCompleted(userId: number): Promise<User> {
     const result = await db.query(
       `UPDATE users SET onboarding_completed = true, updated_at = NOW() WHERE id = $1 RETURNING *`,
@@ -372,6 +381,62 @@ export const usersRepository = {
     return user;
   },
 
+  /**
+   * Request to find a user by OAuth provider and ID
+   * @param provider
+   * @param oauthId
+   */
+  async findByOAuthId(provider: string, oauthId: string): Promise<User | null> {
+    const result = await db.query<User>(
+      `SELECT * FROM users WHERE oauth_provider = $1 AND oauth_id = $2`,
+      [provider, oauthId],
+    );
+    return result.rows[0] || null;
+  },
+
+  /**
+   * Request to create a user from an OAuth provider
+   * @param data
+   */
+  async createOAuthUser(data: {
+    first_name: string;
+    last_name: string;
+    email: string;
+    oauth_provider: string;
+    oauth_id: string;
+    role_id: number;
+  }): Promise<User> {
+    const result = await db.query<User>(
+      `INSERT INTO users (
+        first_name, last_name, email,
+        password_hash, must_change_password,
+        email_verified, is_activated,
+        oauth_provider, oauth_id, role_id
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      RETURNING *`,
+      [
+        data.first_name,
+        data.last_name,
+        data.email,
+        "oauth_no_password",
+        false,
+        true,
+        true,
+        data.oauth_provider,
+        data.oauth_id,
+        data.role_id,
+      ],
+    );
+    const user = result.rows[0];
+    if (!user) throw new AppError("OAuth user creation failed", 400);
+    return user;
+  },
+
+  /**
+   * Request to update user profile picture
+   * @param userId
+   * @param picturePath
+   */
   async updateProfilePicture(userId: number, picturePath: string): Promise<User> {
     const result = await db.query<User>(
       `UPDATE users SET profile_picture = $1, updated_at = NOW() WHERE id = $2 RETURNING *`,
@@ -382,6 +447,11 @@ export const usersRepository = {
     return user;
   },
 
+  /**
+   * Request to assign a clinic to a user
+   * @param userId
+   * @param clinicId
+   */
   async updateClinic(userId: number, clinicId: number): Promise<User> {
     const result = await db.query(
         `

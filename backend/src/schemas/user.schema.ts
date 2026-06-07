@@ -91,6 +91,14 @@ export const UserSchema = UserBaseSchema.extend({
     description: "Profile picture URL",
     example: "/uploads/users/1-1234567890.jpg",
   }),
+  oauth_provider: zod.string().nullable().optional().openapi({
+    description: "OAuth provider name",
+    example: "github",
+  }),
+  oauth_id: zod.string().nullable().optional().openapi({
+    description: "OAuth provider user ID",
+    example: "12345678",
+  }),
   created_at: zod.date(),
   updated_at: zod.date(),
 });

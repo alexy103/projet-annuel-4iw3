@@ -133,6 +133,18 @@ export const changePassword = async (req: Request, res: Response) => {
   }
 };
 
+export const githubOAuth = async (req: Request, res: Response) => {
+  try {
+    const accessToken: string | undefined = req.body.access_token;
+    if (!accessToken) return ApiResponse.badRequest(res, "access_token is required");
+
+    const result = await authService.githubOAuth(accessToken, req);
+    return ApiResponse.success(res, result);
+  } catch (error) {
+    return ApiResponse.getError(res, error);
+  }
+};
+
 export const resetPassword = async (req: Request, res: Response) => {
   try {
     const email: string | undefined = req.body.email;
