@@ -2,6 +2,8 @@ import {
   UpdateUserPayload,
   CreateUserPayload,
   User,
+  UserPublic,
+  toPublicUser,
   Role,
   UserPermission,
   Permission, Clinic,
@@ -26,15 +28,17 @@ import {
 } from "../utils";
 
 export const userService = {
-  async getAll(isActivated: string): Promise<User[]> {
-    return usersRepository.findAll(isActivated);
+  async getAll(isActivated: string): Promise<UserPublic[]> {
+    const users = await usersRepository.findAll(isActivated);
+    return users.map(toPublicUser);
   },
 
-  async getById(id: number): Promise<User> {
-    return usersRepository.findById(id);
+  async getById(id: number): Promise<UserPublic> {
+    const user = await usersRepository.findById(id);
+    return toPublicUser(user);
   },
 
-  async create(data: CreateUserPayload, password?: string): Promise<User> {
+  async create(data: CreateUserPayload, password?: string): Promise<UserPublic> {
     data = {
       ...data,
       email: minimize(data.email),
@@ -78,10 +82,12 @@ export const userService = {
       await sendVerificationCodeEmail(user.email, verificationCode);
     }
 
-    return user;
+    return toPublicUser(user);
   },
 
-  async update(userId: number, data: UpdateUserPayload): Promise<User> {
+  async update(userId: number, data: UpdateUserPayload, callerId: number, role: string): Promise<UserPublic> {
+    if (role === "user" && userId !== callerId) throw new AppError("Access denied", 403);
+
     if (data.email) {
       data.email = minimize(data.email);
     }
@@ -107,10 +113,10 @@ export const userService = {
       if (!roleExists) throw new AppError("Role not found", 404);
     }
 
-    return usersRepository.update(userId, data);
+    return toPublicUser(await usersRepository.update(userId, data));
   },
 
-  async updateEmailVerified(userId: number): Promise<User> {
+  async updateEmailVerified(userId: number): Promise<UserPublic> {
     const existingUser: User = await usersRepository.findById(userId);
     if (!existingUser) throw new AppError("User not found", 404);
 
@@ -118,10 +124,10 @@ export const userService = {
       throw new AppError("Email already verified", 409);
     }
 
-    return usersRepository.updateEmailVerified(userId);
+    return toPublicUser(await usersRepository.updateEmailVerified(userId));
   },
 
-  async setActivation(userId: number, isActivated: boolean): Promise<User> {
+  async setActivation(userId: number, isActivated: boolean): Promise<UserPublic> {
     const existingUser: User = await usersRepository.findById(userId);
     if (!existingUser) throw new AppError("User not found", 404);
 
@@ -135,28 +141,35 @@ export const userService = {
       throw new AppError("User already desactivated", 409);
     }
 
-    return usersRepository.updateActivation(userId, isActivated);
+    return toPublicUser(await usersRepository.updateActivation(userId, isActivated));
   },
 
-  async setClinic(userId: number, clinicId : number): Promise<User> {
+  async setClinic(userId: number, clinicId : number): Promise<UserPublic> {
     const existingUser: User = await usersRepository.findById(userId);
     if (!existingUser) throw new AppError("User not found", 404);
 
     const existingClinic : Clinic = await clinicsRepository.findById(clinicId);
     if (!existingClinic) throw new AppError("Clinic not found", 404);
 
-    return usersRepository.updateClinic(userId, clinicId);
+    return toPublicUser(await usersRepository.updateClinic(userId, clinicId));
   },
 
-  async completeOnboarding(userId: number, callerId: number, role: string): Promise<User> {
+  async uploadProfilePicture(userId: number, picturePath: string, callerId: number, role: string): Promise<UserPublic> {
+    const existingUser: User = await usersRepository.findById(userId);
+    if (!existingUser) throw new AppError("User not found", 404);
+    if (role === "user" && userId !== callerId) throw new AppError("Access denied", 403);
+    return toPublicUser(await usersRepository.updateProfilePicture(userId, picturePath));
+  },
+
+  async completeOnboarding(userId: number, callerId: number, role: string): Promise<UserPublic> {
     const existingUser: User = await usersRepository.findById(userId);
     if (!existingUser) throw new AppError("User not found", 404);
     if (role === "user" && userId !== callerId) throw new AppError("Access denied", 403);
     if (existingUser.onboarding_completed) throw new AppError("Onboarding already completed", 409);
-    return usersRepository.updateOnboardingCompleted(userId);
+    return toPublicUser(await usersRepository.updateOnboardingCompleted(userId));
   },
 
-  async delete(userId: number): Promise<User> {
+  async delete(userId: number): Promise<UserPublic> {
     const existingUser: User = await usersRepository.findById(userId);
     if (!existingUser) throw new AppError("User not found", 404);
 
@@ -169,7 +182,7 @@ export const userService = {
         409,
       );
 
-    return usersRepository.delete(userId);
+    return toPublicUser(await usersRepository.delete(userId));
   },
 
   async findPermissionsByUserId(userId: number): Promise<UserPermission[]> {

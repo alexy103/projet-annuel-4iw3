@@ -87,12 +87,31 @@ export const UserSchema = UserBaseSchema.extend({
   is_activated: zod.boolean(),
   onboarding_completed: zod.boolean(),
   password_temp_expires_at: zod.date().nullable(),
+  profile_picture: zod.string().nullable().optional().openapi({
+    description: "Profile picture URL",
+    example: "/uploads/users/1-1234567890.jpg",
+  }),
   created_at: zod.date(),
   updated_at: zod.date(),
 });
 
 registry.register("User", UserSchema);
 
+export const UserPublicSchema = UserSchema.omit({
+  password_hash: true,
+  email_verification_code: true,
+  email_verification_expires_at: true,
+  password_temp_expires_at: true,
+});
+
+registry.register("UserPublic", UserPublicSchema);
+
 export type User = zod.infer<typeof UserSchema>;
+export type UserPublic = zod.infer<typeof UserPublicSchema>;
 export type CreateUserPayload = zod.infer<typeof CreateUserPayloadSchema>;
 export type UpdateUserPayload = zod.infer<typeof UpdateUserPayloadSchema>;
+
+export function toPublicUser(user: User): UserPublic {
+  const { password_hash, email_verification_code, email_verification_expires_at, password_temp_expires_at, ...publicUser } = user;
+  return publicUser;
+}

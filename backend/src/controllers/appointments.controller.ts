@@ -51,8 +51,8 @@ export const getAppointmentsByAnimalId = async (req: Request, res: Response) => 
             return ApiResponse.badRequest(res, "Animal ID is required");
         }
 
-        const { role, clinic_id } = (req as AuthenticatedRequest).user;
-        const appointments: Appointment[] = await appointmentService.getByAnimalId(Number(animalId), role, clinic_id);
+        const { userId, role, clinic_id } = (req as AuthenticatedRequest).user;
+        const appointments: Appointment[] = await appointmentService.getByAnimalId(Number(animalId), userId, role, clinic_id);
         return ApiResponse.success(res, appointments);
     } catch (error) {
         return ApiResponse.getError(res, error);
@@ -81,8 +81,8 @@ export const getAppointmentsByReasonId = async (req: Request, res: Response) => 
             return ApiResponse.badRequest(res, "Reason ID is required");
         }
 
-        const { role, clinic_id } = (req as AuthenticatedRequest).user;
-        const appointments: Appointment[] = await appointmentService.getByReasonId(Number(reasonId), role, clinic_id);
+        const { userId, role, clinic_id } = (req as AuthenticatedRequest).user;
+        const appointments: Appointment[] = await appointmentService.getByReasonId(Number(reasonId), userId, role, clinic_id);
         return ApiResponse.success(res, appointments);
     } catch (error) {
         return ApiResponse.getError(res, error);
@@ -91,7 +91,8 @@ export const getAppointmentsByReasonId = async (req: Request, res: Response) => 
 
 export const createAppointment = async (req: Request, res: Response) => {
     try {
-        const appointment: Appointment = await appointmentService.create(req.body);
+        const { userId, role } = (req as AuthenticatedRequest).user;
+        const appointment: Appointment = await appointmentService.create(req.body, userId, role);
         return ApiResponse.success(res, appointment, 201);
     } catch (error) {
         return ApiResponse.getError(res, error);
@@ -105,7 +106,8 @@ export const updateAppointment = async (req: Request, res: Response) => {
             return ApiResponse.badRequest(res, "Appointment ID is required");
         }
 
-        const appointment: Appointment = await appointmentService.update(Number(appointmentId), req.body);
+        const { userId, role } = (req as AuthenticatedRequest).user;
+        const appointment: Appointment = await appointmentService.update(Number(appointmentId), req.body, userId, role);
         return ApiResponse.success(res, appointment);
     } catch (error) {
         return ApiResponse.getError(res, error);

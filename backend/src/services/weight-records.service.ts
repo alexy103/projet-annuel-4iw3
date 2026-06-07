@@ -32,9 +32,10 @@ export const weightRecordService = {
     return weightRecordsRepository.findByAnimalId(animalId);
   },
 
-  async create(data: CreateWeightRecordPayload): Promise<WeightRecord> {
+  async create(data: CreateWeightRecordPayload, callerId: number, role: string): Promise<WeightRecord> {
     const existingAnimal: Animal = await animalsRepository.findById(data.animal_id);
     if (!existingAnimal) throw new AppError("Animal not found", 404);
+    assertAnimalAccess(existingAnimal, callerId, role);
     return weightRecordsRepository.create(data);
   },
 

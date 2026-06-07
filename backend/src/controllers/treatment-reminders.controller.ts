@@ -47,9 +47,12 @@ export const getByTreatmentAndFrequency = async (req: Request, res: Response) =>
             return ApiResponse.badRequest(res, "Treatment ID and Frequency ID are required");
         }
 
+        const { userId, role } = (req as AuthenticatedRequest).user;
         const reminder: TreatmentReminder | null = await treatmentReminderService.getByTreatmentAndFrequency(
             Number(treatmentId),
             Number(frequencyId),
+            userId,
+            role,
         );
         return ApiResponse.success(res, reminder);
     } catch (error) {
@@ -65,7 +68,8 @@ export const createTreatmentReminder = async (req: Request, res: Response) => {
             return ApiResponse.badRequest(res, "Treatment ID and Frequency ID are required");
         }
 
-        const reminder: TreatmentReminder = await treatmentReminderService.create(req.body);
+        const { userId, role } = (req as AuthenticatedRequest).user;
+        const reminder: TreatmentReminder = await treatmentReminderService.create(req.body, userId, role);
         return ApiResponse.success(res, reminder, 201);
     } catch (error) {
         return ApiResponse.getError(res, error);
