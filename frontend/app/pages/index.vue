@@ -96,7 +96,22 @@ const handleProfilePictureUpload = (event: Event) => {
     </NuxtLink>
   </div>
 
-  <div v-else class="space-y-4">
+  <div
+    v-else-if="userStore.onboardingCompleted && userStore.animals.length === 0"
+    class="absolute top-1/2 left-1/2 min-w-90 -translate-1/2 space-y-4 text-center lg:space-y-8"
+  >
+    <h2 class="text-xl font-bold">
+      Il semble que vous n'ayez pas encore ajouté d'animal à votre compte...
+    </h2>
+
+    <NuxtLink to="/add-animal">
+      <BaseButton class="flex justify-center">
+        Ajouter mon premier animal
+      </BaseButton>
+    </NuxtLink>
+  </div>
+
+  <div v-else-if="userStore.onboardingCompleted === false" class="space-y-4">
     <h1 class="mt-2 text-2xl font-bold">
       Bienvenue par minous, {{ userStore.firstName }}
     </h1>
@@ -140,5 +155,8 @@ const handleProfilePictureUpload = (event: Event) => {
     <BaseButton class="flex justify-center" @click="completeOnboarding">
       {{ isLoading ? "Chargement..." : "Terminer" }}
     </BaseButton>
+  </div>
+  <div v-else class="flex justify-center py-8">
+    <Icon name="eos-icons:loading" class="text-grey-500 size-10 animate-spin" />
   </div>
 </template>

@@ -12,6 +12,15 @@ type ApiAnimal = {
   image?: string | null;
 };
 
+type ApiUser = {
+  id: number;
+  first_name?: string | null;
+  last_name?: string | null;
+  profile_picture?: string | null;
+  avatar?: string | null;
+  onboarding_completed?: boolean;
+};
+
 export const useUserStore = defineStore("user", () => {
   const userId = ref<number | null>(null);
   const firstName = ref("");
@@ -78,7 +87,50 @@ export const useUserStore = defineStore("user", () => {
   };
 
   const fetchCurrentUser = async () => {
+    errorMessage.value = "";
     loadUserFromStorage();
+
+    isLoading.value = true;
+
+    try {
+      const config = useRuntimeConfig();
+
+      const response = await fetch(`${config.public.apiUrl}/users/me`, {
+        method: "GET",
+        headers: getAuthHeaders(),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(
+          result.error || "Erreur lors du chargement de l'utilisateur",
+        );
+      }
+
+      const user = result.data as ApiUser;
+
+      userId.value = user.id;
+      firstName.value = user.first_name || "";
+      lastName.value = user.last_name || "";
+      avatar.value = getImageUrl(user.profile_picture || user.avatar || null);
+      onboardingCompleted.value = user.onboarding_completed === true;
+
+      localStorage.setItem("userId", String(user.id));
+      localStorage.setItem("firstName", firstName.value);
+      localStorage.setItem("lastName", lastName.value);
+      localStorage.setItem(
+        "onboardingCompleted",
+        String(onboardingCompleted.value),
+      );
+    } catch (error) {
+      errorMessage.value =
+        error instanceof Error
+          ? error.message
+          : "Erreur lors du chargement de l'utilisateur";
+    } finally {
+      isLoading.value = false;
+    }
   };
 
   const fetchAnimals = async () => {

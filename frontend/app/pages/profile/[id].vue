@@ -61,7 +61,7 @@ const profilePictureUrl = computed(() => {
     return `${config.public.backendUrl}${profilePicture.value}`;
   }
 
-  return "/john.png";
+  return "/default-avatar.png";
 });
 
 const fetchMe = async () => {
