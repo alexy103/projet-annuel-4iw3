@@ -1,9 +1,20 @@
 <script setup lang="ts">
-const id = 1;
-
 const userStore = useUserStore();
 
 const showNewApt = ref(false);
+const isReady = ref(false);
+
+const profileLink = computed(() => {
+  return userStore.userId ? `/profile/${userStore.userId}` : "";
+});
+
+onMounted(async () => {
+  userStore.loadUserFromStorage();
+
+  await userStore.fetchAnimals();
+
+  isReady.value = true;
+});
 </script>
 
 <template>
@@ -13,17 +24,20 @@ const showNewApt = ref(false);
         <NuxtLink to="/" class="absolute left-1/2 -translate-x-1/2 text-2xl">
           <h1>PawTracker</h1>
         </NuxtLink>
-        <NuxtLink :to="'/profile/' + id">
+
+        <NuxtLink :to="profileLink">
           <Icon name="solar:user-outline" class="size-8 text-black" />
         </NuxtLink>
+
         <Icon
           name="solar:calendar-add-outline"
           class="ml-2 size-8 cursor-pointer text-black"
           @click="showNewApt = true"
         />
       </div>
+
       <ul
-        v-if="userStore.animals.length"
+        v-if="isReady"
         class="-mx-4 flex items-center gap-2 overflow-x-auto px-4"
       >
         <li
@@ -36,13 +50,19 @@ const showNewApt = ref(false);
             class="flex h-16 w-16 items-center justify-center rounded-full bg-green-300 text-sm font-bold text-black"
           >
             <img
+              v-if="animal.image"
               :src="animal.image"
-              alt=""
+              :alt="animal.name"
               class="h-16 w-16 rounded-full object-cover"
             />
+
+            <span v-else>
+              {{ animal.name.charAt(0).toUpperCase() }}
+            </span>
           </NuxtLink>
         </li>
-        <li>
+
+        <li class="shrink-0">
           <NuxtLink to="/add-animal">
             <button
               type="button"
@@ -54,6 +74,7 @@ const showNewApt = ref(false);
         </li>
       </ul>
     </div>
+
     <BasePopup v-model="showNewApt" fit>
       <div class="w-full max-w-sm">
         <h2 class="mb-4 text-center font-bold">Prendre un rendez-vous</h2>
