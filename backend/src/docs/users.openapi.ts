@@ -200,6 +200,34 @@ registry.registerPath({
 });
 
 registry.registerPath({
+  method: "patch",
+  security: [{ ApiKeyAuth: [] }, { BearerAuth: [] }],
+  path: "/users/{userId}/profile-picture",
+  tags: ["Users"],
+  summary: "Upload user profile picture",
+  request: {
+    params: zod.object({ userId: zod.string() }),
+    body: {
+      content: {
+        "multipart/form-data": {
+          schema: zod.object({
+            profile_picture: zod.string().openapi({ format: "binary", description: "Image file (JPEG, PNG or WebP, max 5MB)" }),
+          }),
+        },
+      },
+    },
+  },
+  responses: {
+    200: JsonResponse(UserSchema, "User profile picture updated"),
+    400: BadRequest,
+    401: UnauthorizedResponse,
+    403: ForbiddenResponse,
+    404: NotFoundResponse,
+    500: ServerErrorResponse,
+  },
+});
+
+registry.registerPath({
   method: "delete",
   security: [{ ApiKeyAuth: [] }, { BearerAuth: [] }],
   path: "/users/{userId}",

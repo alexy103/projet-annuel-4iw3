@@ -372,6 +372,16 @@ export const usersRepository = {
     return user;
   },
 
+  async updateProfilePicture(userId: number, picturePath: string): Promise<User> {
+    const result = await db.query<User>(
+      `UPDATE users SET profile_picture = $1, updated_at = NOW() WHERE id = $2 RETURNING *`,
+      [picturePath, userId],
+    );
+    const user: User | undefined = result.rows[0];
+    if (!user) throw new AppError("User profile picture update failed", 400);
+    return user;
+  },
+
   async updateClinic(userId: number, clinicId: number): Promise<User> {
     const result = await db.query(
         `

@@ -44,7 +44,8 @@ export const updateUser = async (req: Request, res: Response) => {
       return ApiResponse.badRequest(res, "User ID is required");
     }
 
-    const user: User = await userService.update(Number(userId), req.body);
+    const { userId: callerId, role } = (req as AuthenticatedRequest).user;
+    const user: User = await userService.update(Number(userId), req.body, callerId, role);
     return ApiResponse.success(res, user);
   } catch (error) {
     return ApiResponse.getError(res, error);
@@ -109,6 +110,21 @@ export const toggleUserActivation = async (req: Request, res: Response) => {
         Number(userId),
         isActivated,
     );
+    return ApiResponse.success(res, user);
+  } catch (error) {
+    return ApiResponse.getError(res, error);
+  }
+};
+
+export const uploadUserProfilePicture = async (req: Request, res: Response) => {
+  try {
+    const userId: string | undefined = req.params.userId;
+    if (!userId) return ApiResponse.badRequest(res, "User ID is required");
+    if (!req.file) return ApiResponse.badRequest(res, "No file uploaded");
+
+    const { userId: callerId, role } = (req as AuthenticatedRequest).user;
+    const picturePath = `/uploads/users/${req.file.filename}`;
+    const user: User = await userService.uploadProfilePicture(Number(userId), picturePath, callerId, role);
     return ApiResponse.success(res, user);
   } catch (error) {
     return ApiResponse.getError(res, error);

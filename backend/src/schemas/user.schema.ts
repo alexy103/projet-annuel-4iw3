@@ -87,6 +87,10 @@ export const UserSchema = UserBaseSchema.extend({
   is_activated: zod.boolean(),
   onboarding_completed: zod.boolean(),
   password_temp_expires_at: zod.date().nullable(),
+  profile_picture: zod.string().nullable().optional().openapi({
+    description: "Profile picture URL",
+    example: "/uploads/users/1-1234567890.jpg",
+  }),
   created_at: zod.date(),
   updated_at: zod.date(),
 });
