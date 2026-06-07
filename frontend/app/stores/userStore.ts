@@ -1,7 +1,7 @@
 type Animal = {
   id: number;
   name: string;
-  image: string | null;
+  image: string | undefined;
 };
 
 type ApiAnimal = {

@@ -75,6 +75,7 @@ const handleProfilePictureUpload = (event: Event) => {
           v-for="animal in userStore.animals"
           :key="animal.id"
           :src="animal.image"
+          :id="animal.id"
         />
       </div>
     </BaseSection>
