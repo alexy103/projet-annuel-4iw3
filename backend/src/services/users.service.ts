@@ -81,7 +81,9 @@ export const userService = {
     return user;
   },
 
-  async update(userId: number, data: UpdateUserPayload): Promise<User> {
+  async update(userId: number, data: UpdateUserPayload, callerId: number, role: string): Promise<User> {
+    if (role === "user" && userId !== callerId) throw new AppError("Access denied", 403);
+
     if (data.email) {
       data.email = minimize(data.email);
     }
@@ -146,6 +148,13 @@ export const userService = {
     if (!existingClinic) throw new AppError("Clinic not found", 404);
 
     return usersRepository.updateClinic(userId, clinicId);
+  },
+
+  async uploadProfilePicture(userId: number, picturePath: string, callerId: number, role: string): Promise<User> {
+    const existingUser: User = await usersRepository.findById(userId);
+    if (!existingUser) throw new AppError("User not found", 404);
+    if (role === "user" && userId !== callerId) throw new AppError("Access denied", 403);
+    return usersRepository.updateProfilePicture(userId, picturePath);
   },
 
   async completeOnboarding(userId: number, callerId: number, role: string): Promise<User> {
