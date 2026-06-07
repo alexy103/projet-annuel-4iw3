@@ -168,6 +168,75 @@ export const authService = {
     }
   },
 
+  async githubOAuth(accessToken: string, req?: Request) {
+    const userRes = await fetch("https://api.github.com/user", {
+      headers: { Authorization: `Bearer ${accessToken}`, "User-Agent": "vetapp" },
+    });
+    if (!userRes.ok) throw new AppError("Invalid GitHub access token", 401);
+    const githubUser = await userRes.json() as { id: number; name?: string; email?: string; login: string };
+
+    let email = githubUser.email;
+    if (!email) {
+      const emailsRes = await fetch("https://api.github.com/user/emails", {
+        headers: { Authorization: `Bearer ${accessToken}`, "User-Agent": "vetapp" },
+      });
+      if (emailsRes.ok) {
+        const emails = await emailsRes.json() as { email: string; primary: boolean; verified: boolean }[];
+        email = emails.find((e) => e.primary && e.verified)?.email ?? emails[0]?.email;
+      }
+    }
+    if (!email) throw new AppError("No email available on GitHub account", 400);
+
+    const oauthId = String(githubUser.id);
+    let user: User | null = await usersRepository.findByOAuthId("github", oauthId);
+
+    if (!user) {
+      const existingByEmail: User | null = await usersRepository.findByEmail(email);
+      if (existingByEmail) {
+        user = existingByEmail;
+      } else {
+        const role = await rolesRepository.findByLabel("user");
+        if (!role) throw new AppError("Role not found", 404);
+
+        const [firstName = githubUser.login, ...rest] = (githubUser.name ?? githubUser.login).split(" ");
+        const lastName = rest.join(" ") || githubUser.login;
+
+        user = await usersRepository.createOAuthUser({
+          first_name: firstName,
+          last_name: lastName,
+          email,
+          oauth_provider: "github",
+          oauth_id: oauthId,
+          role_id: role.id,
+        });
+      }
+    }
+
+    if (!user.is_activated) throw new AppError("Account is disabled", 403);
+
+    const jwtSecret = process.env.JWT_SECRET;
+    const jwtRefreshSecret = process.env.JWT_REFRESH_SECRET;
+    if (!jwtSecret || !jwtRefreshSecret) throw new AppError("Server configuration error", 500);
+
+    const newAccessToken = jwt.sign({ userId: user.id }, jwtSecret, { expiresIn: "7d" });
+    const newRefreshToken = jwt.sign({ userId: user.id }, jwtRefreshSecret, { expiresIn: "24h" });
+
+    const session: UserSession = await sessionsRepository.create(
+      user.id,
+      await hashPassword(newRefreshToken),
+      req?.headers["user-agent"] || null,
+      req?.ip || null,
+    );
+
+    return {
+      userId: user.id,
+      roleId: user.role_id,
+      accessToken: newAccessToken,
+      refreshToken: newRefreshToken,
+      sessionId: session.id,
+    };
+  },
+
   async logout(userId: number): Promise<void> {
     if (!userId) throw new AppError("User id required for logout", 400);
 

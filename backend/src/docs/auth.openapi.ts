@@ -13,7 +13,8 @@ import {
   LoginPayloadSchema,
   LoginSchema,
   RefreshTokenSchema, RefreshTokenPayloadSchema, VerifyCodePayloadSchema, ResendCodePayloadSchema,
-  ChangePasswordPayloadSchema, ResetPasswordPayloadSchema, UserSchema, RegisterPayloadSchema
+  ChangePasswordPayloadSchema, ResetPasswordPayloadSchema, UserSchema, RegisterPayloadSchema,
+  GithubOAuthPayloadSchema,
 } from "../schemas";
 
 registry.registerPath({
@@ -185,6 +186,30 @@ registry.registerPath({
     403: ForbiddenResponse,
     404: NotFoundResponse,
     409: ConflictResponse,
+    500: ServerErrorResponse,
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  security: [{ ApiKeyAuth: [] }],
+  path: "/auth/oauth/github",
+  tags: ["Auth"],
+  summary: "Login or register with GitHub OAuth",
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: GithubOAuthPayloadSchema,
+        },
+      },
+    },
+  },
+  responses: {
+    200: JsonResponse(LoginSchema, "Authenticated via GitHub"),
+    400: BadRequest,
+    401: UnauthorizedResponse,
+    403: ForbiddenResponse,
     500: ServerErrorResponse,
   },
 });

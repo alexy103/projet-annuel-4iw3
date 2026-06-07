@@ -115,6 +115,18 @@ registry.register("RegisterPayload", RegisterPayloadSchema);
 
 export type RegisterPayload = zod.infer<typeof RegisterPayloadSchema>;
 
+export const GithubOAuthPayloadSchema = zod
+  .object({
+    access_token: zod.string().min(1, "Access token is required").openapi({
+      description: "GitHub OAuth access token",
+      example: "gho_xxxxxxxxxxxxxxxxxxxx",
+    }),
+  })
+  .strict();
+registry.register("GithubOAuthPayload", GithubOAuthPayloadSchema);
+
+export type GithubOAuthPayload = zod.infer<typeof GithubOAuthPayloadSchema>;
+
 export const ResetPasswordPayloadSchema = zod
   .object({
     email: zod.email().max(254, "Email too long"),
