@@ -46,7 +46,8 @@ export const getHeightRecordsByAnimalId = async (req: Request, res: Response) =>
 
 export const createHeightRecord = async (req: Request, res: Response) => {
     try {
-        const record: HeightRecord = await heightRecordService.create(req.body);
+        const { userId, role } = (req as AuthenticatedRequest).user;
+        const record: HeightRecord = await heightRecordService.create(req.body, userId, role);
         return ApiResponse.success(res, record, 201);
     } catch (error) {
         return ApiResponse.getError(res, error);

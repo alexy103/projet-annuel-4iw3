@@ -6,8 +6,8 @@ import { AuthenticatedRequest } from "../types";
 
 export const getConsultations = async (req: Request, res: Response) => {
     try {
-        const { role, clinic_id } = (req as AuthenticatedRequest).user;
-        const consultations: Consultation[] = await consultationService.getAll(role, clinic_id);
+        const { userId, role, clinic_id } = (req as AuthenticatedRequest).user;
+        const consultations: Consultation[] = await consultationService.getAll(userId, role, clinic_id);
 
         return ApiResponse.success(res, consultations);
     } catch (error) {
@@ -30,8 +30,8 @@ export const getConsultationById = async (
             );
         }
 
-        const { role, clinic_id } = (req as AuthenticatedRequest).user;
-        const consultation: Consultation = await consultationService.getById(Number(consultationId), role, clinic_id);
+        const { userId, role, clinic_id } = (req as AuthenticatedRequest).user;
+        const consultation: Consultation = await consultationService.getById(Number(consultationId), userId, role, clinic_id);
 
         return ApiResponse.success(res, consultation);
     } catch (error) {
@@ -54,8 +54,8 @@ export const getConsultationsByAppointmentId = async (
             );
         }
 
-        const { role, clinic_id } = (req as AuthenticatedRequest).user;
-        const consultations: Consultation = await consultationService.getByAppointmentId(Number(appointmentId), role, clinic_id);
+        const { userId, role, clinic_id } = (req as AuthenticatedRequest).user;
+        const consultations: Consultation = await consultationService.getByAppointmentId(Number(appointmentId), userId, role, clinic_id);
 
         return ApiResponse.success(res, consultations);
     } catch (error) {

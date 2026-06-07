@@ -36,12 +36,14 @@ export const careService = {
     return caresRepository.findByTreatmentTypeId(treatmentTypeId);
   },
 
-  async create(data: CreateCarePayload): Promise<Care> {
+  async create(data: CreateCarePayload, callerId: number, role: string): Promise<Care> {
     const existingAnimal: Animal = await animalsRepository.findById(data.animal_id);
     if (!existingAnimal) throw new AppError("Animal not found", 404);
+    assertAnimalAccess(existingAnimal, callerId, role);
 
     const existingTreatmentType: TreatmentType = await treatmentTypesRepository.findById(data.treatment_type_id);
     if (!existingTreatmentType) throw new AppError("TreatmentType not found", 404);
+    if (role === "user" && existingTreatmentType.user_id !== callerId) throw new AppError("Access denied", 403);
 
     return caresRepository.create(data);
   },

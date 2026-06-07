@@ -74,7 +74,8 @@ export const getTreatmentsByTreatmentTypeId = async (req: Request, res: Response
 
 export const createTreatment = async (req: Request, res: Response) => {
     try {
-        const treatment: Treatment = await treatmentService.create(req.body);
+        const { userId, role } = (req as AuthenticatedRequest).user;
+        const treatment: Treatment = await treatmentService.create(req.body, userId, role);
         return ApiResponse.success(res, treatment, 201);
     } catch (error) {
         return ApiResponse.getError(res, error);

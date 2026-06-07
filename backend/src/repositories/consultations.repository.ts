@@ -46,6 +46,16 @@ class ConsultationRepository extends BaseRepository<Consultation, CreateConsulta
     );
     return result.rows;
   }
+
+  async findByUserId(userId: number): Promise<Consultation[]> {
+    const result = await db.query<Consultation>(
+      `SELECT c.* FROM ${this.table} c
+       INNER JOIN appointments a ON c.appointment_id = a.id
+       WHERE a.user_id = $1`,
+      [userId],
+    );
+    return result.rows;
+  }
 }
 
 export const consultationsRepository = new ConsultationRepository();

@@ -70,23 +70,20 @@ export const treatmentService = {
     return treatmentsRepository.findByTreatmentTypeId(typeId);
   },
 
-  async create(data: CreateTreatmentPayload): Promise<Treatment> {
+  async create(data: CreateTreatmentPayload, callerId: number, role: string): Promise<Treatment> {
+    const existingAnimal: Animal = await animalsRepository.findById(data.animal_id);
+    if (!existingAnimal) throw new AppError("Animal not found", 404);
+    assertAnimalAccess(existingAnimal, callerId, role);
+
     if (data.medicine_id) {
-      const existingMedicine: Medicine = await medicinesRepository.findById(
-        data.medicine_id,
-      );
+      const existingMedicine: Medicine = await medicinesRepository.findById(data.medicine_id);
       if (!existingMedicine) throw new AppError("Medicine not found", 404);
+      if (role === "user" && existingMedicine.user_id !== callerId) throw new AppError("Access denied", 403);
     }
 
-    const existingAnimal: Animal = await animalsRepository.findById(
-      data.animal_id,
-    );
-    if (!existingAnimal) throw new AppError("Animal not found", 404);
-
-    const existingTreatmentType: TreatmentType =
-      await treatmentTypesRepository.findById(data.treatment_type_id);
-    if (!existingTreatmentType)
-      throw new AppError("Treatment Type not found", 404);
+    const existingTreatmentType: TreatmentType = await treatmentTypesRepository.findById(data.treatment_type_id);
+    if (!existingTreatmentType) throw new AppError("Treatment Type not found", 404);
+    if (role === "user" && existingTreatmentType.user_id !== callerId) throw new AppError("Access denied", 403);
 
     return treatmentsRepository.create(data);
   },

@@ -44,7 +44,10 @@ export const treatmentReminderService = {
   async getByTreatmentAndFrequency(
     treatmentId: number,
     frequencyId: number,
+    callerId: number,
+    role: string,
   ): Promise<TreatmentReminder | null> {
+    await assertTreatmentAccess(treatmentId, callerId, role);
     return treatmentRemindersRepository.findByTreatmentAndFrequency(
       treatmentId,
       frequencyId,
@@ -53,11 +56,10 @@ export const treatmentReminderService = {
 
   async create(
     data: CreateTreatmentReminderPayload,
+    callerId: number,
+    role: string,
   ): Promise<TreatmentReminder> {
-    const existingTreatment: Treatment = await treatmentsRepository.findById(
-      data.treatment_id,
-    );
-    if (!existingTreatment) throw new AppError("Treatment not found", 404);
+    await assertTreatmentAccess(data.treatment_id, callerId, role);
 
     const existingReminderFrequency: ReminderFrequency =
       await reminderFrequenciesRepository.findById(data.reminder_frequency_id);
