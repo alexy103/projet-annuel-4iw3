@@ -1,8 +1,135 @@
 <script setup lang="ts">
-const props = defineProps<{ type: "weight" | "size" }>();
+type ApiResponse<T> = {
+  success: boolean;
+  data: T;
+  message?: string;
+};
 
-const color = props.type === "weight" ? "text-blue-500" : "text-green-500";
-const label = props.type === "weight" ? "kg" : "cm";
+type WeightRecord = {
+  id: number;
+  date: string;
+  weight: number;
+  animal_id: number;
+  created_at?: string;
+};
+
+type HeightRecord = {
+  id: number;
+  date: string;
+  height: number;
+  animal_id: number;
+  created_at?: string;
+};
+
+const props = defineProps<{
+  type: "weight" | "size";
+  animalId: number;
+  refreshKey?: number;
+}>();
+
+const config = useRuntimeConfig();
+
+const value = ref<number | null>(null);
+const measurementDate = ref<string | null>(null);
+const loading = ref(false);
+const fetchError = ref("");
+
+const color = computed(() =>
+  props.type === "weight" ? "text-blue-500" : "text-green-500",
+);
+const label = computed(() => (props.type === "weight" ? "kg" : "cm"));
+const displayedValue = computed(() =>
+  value.value === null ? "--" : String(Math.trunc(value.value)),
+);
+
+const authHeaders = computed(() => {
+  const headers: Record<string, string> = {
+    "x-api-key": config.public.apiKey,
+  };
+
+  if (import.meta.client) {
+    const accessToken = localStorage.getItem("accessToken");
+    if (accessToken) {
+      headers.Authorization = `Bearer ${accessToken}`;
+    }
+  }
+
+  return headers;
+});
+
+const getRecordTimestamp = (recordDate: string) =>
+  new Date(recordDate).getTime();
+
+const sortByLatestEntry = <
+  T extends { id: number; date: string; created_at?: string },
+>(
+  left: T,
+  right: T,
+) => {
+  const dateDiff =
+    getRecordTimestamp(right.date) - getRecordTimestamp(left.date);
+  if (dateDiff !== 0) {
+    return dateDiff;
+  }
+
+  const leftCreatedAt = left.created_at
+    ? new Date(left.created_at).getTime()
+    : 0;
+  const rightCreatedAt = right.created_at
+    ? new Date(right.created_at).getTime()
+    : 0;
+  const createdAtDiff = rightCreatedAt - leftCreatedAt;
+  if (createdAtDiff !== 0) {
+    return createdAtDiff;
+  }
+
+  return right.id - left.id;
+};
+
+const fetchLatestMeasurement = async () => {
+  loading.value = true;
+  fetchError.value = "";
+
+  try {
+    if (props.type === "weight") {
+      const response = await $fetch<ApiResponse<WeightRecord[]>>(
+        `${config.public.apiUrl}/weight-records/animal/${props.animalId}`,
+        { headers: authHeaders.value },
+      );
+
+      const latest = [...response.data].sort(sortByLatestEntry)[0];
+
+      value.value = latest?.weight ?? null;
+      measurementDate.value = latest?.date ?? null;
+      return;
+    }
+
+    const response = await $fetch<ApiResponse<HeightRecord[]>>(
+      `${config.public.apiUrl}/height-records/animal/${props.animalId}`,
+      { headers: authHeaders.value },
+    );
+
+    const latest = [...response.data].sort(sortByLatestEntry)[0];
+
+    value.value = latest?.height ?? null;
+    measurementDate.value = latest?.date ?? null;
+  } catch (error) {
+    console.error(error);
+    fetchError.value = "Impossible de charger la mesure.";
+    value.value = null;
+    measurementDate.value = null;
+  } finally {
+    loading.value = false;
+  }
+};
+
+watch(
+  () => [props.animalId, props.type, props.refreshKey],
+  async () => {
+    await fetchLatestMeasurement();
+  },
+  { immediate: true },
+);
 </script>
 
 <template>
@@ -11,9 +138,16 @@ const label = props.type === "weight" ? "kg" : "cm";
   >
     <p>Dernière mesure</p>
     <p>
-      <span :class="color" class="text-5xl font-black">34</span>
+      <span :class="color" class="text-5xl font-black">{{
+        displayedValue
+      }}</span>
       <span>{{ label }}</span>
     </p>
-    27/12/2025
+    <p v-if="measurementDate">
+      {{ new Date(measurementDate).toLocaleDateString("fr-FR") }}
+    </p>
+    <p v-else-if="loading">Chargement...</p>
+    <p v-else>Aucune mesure</p>
+    <p v-if="fetchError" class="text-xs text-red-600">{{ fetchError }}</p>
   </div>
 </template>
