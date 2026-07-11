@@ -61,6 +61,12 @@ const authHeaders = computed(() => {
 const chartValues = computed(() => values.value.slice(-6));
 const maxValue = computed(() => Math.max(...chartValues.value, 1));
 
+const chartContainerClass = computed(() =>
+  props.type === "size"
+    ? "absolute right-4 bottom-3 left-4 flex h-22 items-end justify-stretch gap-1"
+    : "mt-3 flex h-22 w-full items-end justify-stretch gap-1",
+);
+
 const barHeights = computed(() =>
   chartValues.value.map((value) =>
     Math.max(12, Math.round((value / maxValue.value) * 100)),
@@ -124,16 +130,17 @@ watch(
       Chargement...
     </div>
 
-    <div
-      v-else-if="chartValues.length > 0"
-      class="mt-3 flex h-[88px] items-end justify-center gap-1"
-    >
+    <div v-else-if="chartValues.length > 0" :class="chartContainerClass">
       <div
         v-for="(height, index) in barHeights"
         :key="index"
-        class="w-3 rounded-sm bg-white/90"
-        :style="{ height: `${height}%` }"
-      />
+        class="flex h-full flex-1 items-end justify-center"
+      >
+        <div
+          class="w-full max-w-4 rounded-sm bg-white/90"
+          :style="{ height: `${height}%` }"
+        />
+      </div>
     </div>
 
     <div v-else class="flex h-full items-end justify-center text-xs">

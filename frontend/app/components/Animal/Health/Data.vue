@@ -10,6 +10,7 @@ type WeightRecord = {
   date: string;
   weight: number;
   animal_id: number;
+  created_at?: string;
 };
 
 type HeightRecord = {
@@ -17,6 +18,7 @@ type HeightRecord = {
   date: string;
   height: number;
   animal_id: number;
+  created_at?: string;
 };
 
 const props = defineProps<{
@@ -55,7 +57,34 @@ const authHeaders = computed(() => {
   return headers;
 });
 
-const getRecordTimestamp = (recordDate: string) => new Date(recordDate).getTime();
+const getRecordTimestamp = (recordDate: string) =>
+  new Date(recordDate).getTime();
+
+const sortByLatestEntry = <
+  T extends { id: number; date: string; created_at?: string },
+>(
+  left: T,
+  right: T,
+) => {
+  const dateDiff =
+    getRecordTimestamp(right.date) - getRecordTimestamp(left.date);
+  if (dateDiff !== 0) {
+    return dateDiff;
+  }
+
+  const leftCreatedAt = left.created_at
+    ? new Date(left.created_at).getTime()
+    : 0;
+  const rightCreatedAt = right.created_at
+    ? new Date(right.created_at).getTime()
+    : 0;
+  const createdAtDiff = rightCreatedAt - leftCreatedAt;
+  if (createdAtDiff !== 0) {
+    return createdAtDiff;
+  }
+
+  return right.id - left.id;
+};
 
 const fetchLatestMeasurement = async () => {
   loading.value = true;
@@ -68,9 +97,7 @@ const fetchLatestMeasurement = async () => {
         { headers: authHeaders.value },
       );
 
-      const latest = [...response.data].sort(
-        (a, b) => getRecordTimestamp(b.date) - getRecordTimestamp(a.date),
-      )[0];
+      const latest = [...response.data].sort(sortByLatestEntry)[0];
 
       value.value = latest?.weight ?? null;
       measurementDate.value = latest?.date ?? null;
@@ -82,9 +109,7 @@ const fetchLatestMeasurement = async () => {
       { headers: authHeaders.value },
     );
 
-    const latest = [...response.data].sort(
-      (a, b) => getRecordTimestamp(b.date) - getRecordTimestamp(a.date),
-    )[0];
+    const latest = [...response.data].sort(sortByLatestEntry)[0];
 
     value.value = latest?.height ?? null;
     measurementDate.value = latest?.date ?? null;
@@ -113,7 +138,9 @@ watch(
   >
     <p>Dernière mesure</p>
     <p>
-      <span :class="color" class="text-5xl font-black">{{ displayedValue }}</span>
+      <span :class="color" class="text-5xl font-black">{{
+        displayedValue
+      }}</span>
       <span>{{ label }}</span>
     </p>
     <p v-if="measurementDate">
