@@ -134,7 +134,7 @@ watch(
 
 <template>
   <div
-    class="size-40 rounded-2xl border-2 border-black p-4 font-bold text-black shadow-lg"
+    class="aspect-square w-full max-w-40 rounded-2xl border-2 border-black p-4 font-bold text-black shadow-lg"
   >
     <p>Dernière mesure</p>
     <p>
