@@ -34,6 +34,7 @@ const router = useRouter();
 const showInfo = ref(false);
 const showQr = ref(false);
 const showEdit = ref(false);
+const showNewMeasurement = ref(false);
 
 const animal = ref<Animal | null>(null);
 const species = ref<Species[]>([]);
@@ -41,12 +42,27 @@ const species = ref<Species[]>([]);
 const isLoading = ref(true);
 const isSubmitting = ref(false);
 const errorMessage = ref("");
+const newMeasurementError = ref("");
 
 const editName = ref("");
 const editSpecies = ref("");
 const editBreed = ref("");
 const editBirth = ref("");
+const editAdoption = ref("");
 const editPicture = ref<File | null>(null);
+
+const getTodayDateInputValue = () => {
+  const now = new Date();
+  const timezoneOffsetInMs = now.getTimezoneOffset() * 60_000;
+  return new Date(now.getTime() - timezoneOffsetInMs)
+    .toISOString()
+    .slice(0, 10);
+};
+
+const newMeasurementDate = ref(getTodayDateInputValue());
+const newMeasurementWeight = ref<number | null>(null);
+const newMeasurementSize = ref<number | null>(null);
+const healthDataRefreshKey = ref(0);
 
 const animalId = computed(() => {
   const param = route.params.animalId || route.params.id;
@@ -146,6 +162,23 @@ const formatDate = (date?: string) => {
   return new Date(date).toLocaleDateString("fr-FR");
 };
 
+const getApiErrorMessage = (error: unknown, fallbackMessage: string) => {
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "data" in error &&
+    typeof (error as { data?: unknown }).data === "object" &&
+    (error as { data?: unknown }).data !== null &&
+    "error" in ((error as { data?: unknown }).data as Record<string, unknown>) &&
+    typeof ((error as { data?: unknown }).data as Record<string, unknown>).error ===
+      "string"
+  ) {
+    return ((error as { data?: unknown }).data as { error: string }).error;
+  }
+
+  return fallbackMessage;
+};
+
 const fetchCurrentAnimal = async () => {
   if (!animalId.value) {
     errorMessage.value = "Animal introuvable.";
@@ -166,6 +199,7 @@ const fetchCurrentAnimal = async () => {
     editSpecies.value = String(response.data.species_id);
     editBreed.value = response.data.breed;
     editBirth.value = response.data.birth_date.slice(0, 10);
+    editAdoption.value = response.data.adoption_date.slice(0, 10);
   } catch (error) {
     console.error(error);
     errorMessage.value = "Impossible de charger cet animal.";
@@ -207,7 +241,7 @@ const submitEdit = async () => {
         name: editName.value,
         breed: editBreed.value,
         birth_date: editBirth.value,
-        adoption_date: animal.value.adoption_date,
+        adoption_date: editAdoption.value,
         sex: animal.value.sex,
         species_id: Number(editSpecies.value),
         color: animal.value.color,
@@ -251,6 +285,16 @@ const deleteAnimal = async () => {
     return;
   }
 
+  if (import.meta.client) {
+    const confirmed = window.confirm(
+      "Es-tu sûr de vouloir supprimer cet animal ? Cette action est irréversible.",
+    );
+
+    if (!confirmed) {
+      return;
+    }
+  }
+
   try {
     isSubmitting.value = true;
     errorMessage.value = "";
@@ -263,7 +307,10 @@ const deleteAnimal = async () => {
     await router.push("/");
   } catch (error) {
     console.error(error);
-    errorMessage.value = "Impossible de supprimer cet animal.";
+    errorMessage.value = getApiErrorMessage(
+      error,
+      "Impossible de supprimer cet animal.",
+    );
   } finally {
     isSubmitting.value = false;
   }
@@ -275,6 +322,120 @@ const handlePictureChange = (event: Event) => {
   editPicture.value = input.files?.[0] || null;
 };
 
+const submitNewMeasurement = async () => {
+  if (!animalId.value) {
+    newMeasurementError.value = "Animal introuvable.";
+    return;
+  }
+
+  const parsedAnimalId = Number(animalId.value);
+  if (!Number.isInteger(parsedAnimalId) || parsedAnimalId <= 0) {
+    newMeasurementError.value = "Identifiant animal invalide.";
+    return;
+  }
+
+  const hasWeight =
+    newMeasurementWeight.value !== null &&
+    Number.isFinite(newMeasurementWeight.value);
+  const hasSize =
+    newMeasurementSize.value !== null &&
+    Number.isFinite(newMeasurementSize.value);
+
+  if (!hasWeight && !hasSize) {
+    newMeasurementError.value =
+      "Renseigne au moins une mesure (poids ou taille).";
+    return;
+  }
+
+  if (
+    hasWeight &&
+    (!Number.isInteger(newMeasurementWeight.value) ||
+      newMeasurementWeight.value <= 0)
+  ) {
+    newMeasurementError.value =
+      "Le poids doit être un entier strictement positif.";
+    return;
+  }
+
+  if (
+    hasSize &&
+    (!Number.isInteger(newMeasurementSize.value) ||
+      newMeasurementSize.value <= 0)
+  ) {
+    newMeasurementError.value =
+      "La taille doit être un entier strictement positif.";
+    return;
+  }
+
+  try {
+    isSubmitting.value = true;
+    newMeasurementError.value = "";
+
+    const headers = {
+      ...authHeaders.value,
+      "Content-Type": "application/json",
+    };
+
+    const requests: Promise<unknown>[] = [];
+
+    if (hasWeight) {
+      requests.push(
+        $fetch(`${config.public.apiUrl}/weight-records`, {
+          method: "POST",
+          headers,
+          body: {
+            date: newMeasurementDate.value,
+            weight: newMeasurementWeight.value,
+            animal_id: parsedAnimalId,
+          },
+        }),
+      );
+    }
+
+    if (hasSize) {
+      requests.push(
+        $fetch(`${config.public.apiUrl}/height-records`, {
+          method: "POST",
+          headers,
+          body: {
+            date: newMeasurementDate.value,
+            height: newMeasurementSize.value,
+            animal_id: parsedAnimalId,
+          },
+        }),
+      );
+    }
+
+    await Promise.all(requests);
+    healthDataRefreshKey.value += 1;
+
+    showNewMeasurement.value = false;
+    newMeasurementDate.value = getTodayDateInputValue();
+    newMeasurementWeight.value = null;
+    newMeasurementSize.value = null;
+  } catch (error) {
+    console.error(error);
+    newMeasurementError.value = "Impossible d'enregistrer la mesure.";
+  } finally {
+    isSubmitting.value = false;
+  }
+};
+
+watch(showNewMeasurement, (isOpen) => {
+  if (!isOpen) {
+    return;
+  }
+
+  newMeasurementDate.value = getTodayDateInputValue();
+  newMeasurementError.value = "";
+});
+
+watch(showInfo, (isOpen) => {
+  if (isOpen) {
+    errorMessage.value = "";
+  }
+});
+
 onMounted(async () => {
   isLoading.value = true;
 
@@ -285,7 +446,9 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div v-if="isLoading">Chargement...</div>
+  <div v-if="isLoading">
+    <Icon name="eos-icons:loading" class="text-grey-500 size-10 animate-spin" />
+  </div>
 
   <div v-else-if="errorMessage && !animal">
     <p class="text-center text-red-600">{{ errorMessage }}</p>
@@ -357,10 +520,26 @@ onMounted(async () => {
     <div class="md:flex md:items-stretch md:gap-16">
       <BaseSection title="Carnet de santé" color="blue">
         <div class="grid grid-cols-2 justify-items-center gap-4 md:w-fit">
-          <AnimalHealthGraph type="weight" />
-          <AnimalHealthData type="weight" />
-          <AnimalHealthData type="size" />
-          <AnimalHealthGraph type="size" />
+          <AnimalHealthGraph
+            type="weight"
+            :animal-id="animal.id"
+            :refresh-key="healthDataRefreshKey"
+          />
+          <AnimalHealthData
+            type="weight"
+            :animal-id="animal.id"
+            :refresh-key="healthDataRefreshKey"
+          />
+          <AnimalHealthData
+            type="size"
+            :animal-id="animal.id"
+            :refresh-key="healthDataRefreshKey"
+          />
+          <AnimalHealthGraph
+            type="size"
+            :animal-id="animal.id"
+            :refresh-key="healthDataRefreshKey"
+          />
         </div>
       </BaseSection>
 
@@ -368,6 +547,7 @@ onMounted(async () => {
         title="Évolution"
         action="Nouvelle mesure"
         plus
+        @action-click="showNewMeasurement = true"
         class="md:flex md:flex-1 md:flex-col md:items-stretch"
       >
         <div class="md:flex md:flex-1 md:flex-col md:items-stretch">
@@ -381,12 +561,6 @@ onMounted(async () => {
         </div>
       </BaseSection>
     </div>
-
-    <BaseSection title="Images" color="blue">
-      <div class="grid grid-cols-2 gap-3">
-        <img v-for="i in 4" :key="i" src="/kyky2.jpg" alt="" />
-      </div>
-    </BaseSection>
   </div>
 
   <BasePopup v-model="showInfo">
@@ -394,6 +568,9 @@ onMounted(async () => {
 
     <p>Date de naissance : {{ formatDate(animal?.birth_date) }}</p>
     <p>Date d'adoption : {{ formatDate(animal?.adoption_date) }}</p>
+    <p v-if="errorMessage" class="mt-2 text-center text-sm text-red-600">
+      {{ errorMessage }}
+    </p>
 
     <button
       class="button-sm mx-auto mt-4 border shadow"
@@ -476,6 +653,18 @@ onMounted(async () => {
         </div>
 
         <div class="flex flex-col gap-1">
+          <label for="adoption" class="text-sm font-medium">
+            Date d'adoption
+          </label>
+          <input
+            id="adoption"
+            v-model="editAdoption"
+            type="date"
+            class="border-grey-300 rounded-lg border bg-white px-3 py-2 focus:border-green-700 focus:outline-none"
+          />
+        </div>
+
+        <div class="flex flex-col gap-1">
           <label for="picture" class="text-sm font-medium">
             Nouvelle photo
           </label>
@@ -496,6 +685,63 @@ onMounted(async () => {
           {{ isSubmitting ? "Enregistrement..." : "Enregistrer" }}
         </button>
       </div>
+    </form>
+  </BasePopup>
+
+  <BasePopup v-model="showNewMeasurement">
+    <form class="flex flex-col gap-4" @submit.prevent="submitNewMeasurement">
+      <h2 class="text-center font-bold">Nouvelle mesure</h2>
+
+      <p v-if="newMeasurementError" class="text-center text-sm text-red-600">
+        {{ newMeasurementError }}
+      </p>
+
+      <div class="flex flex-col gap-1">
+        <label for="measurement-date" class="text-sm font-medium">Date</label>
+        <input
+          id="measurement-date"
+          v-model="newMeasurementDate"
+          type="date"
+          required
+          class="border-grey-300 rounded-lg border bg-white px-3 py-2 focus:border-green-700 focus:outline-none"
+        />
+      </div>
+
+      <div class="flex flex-col gap-1">
+        <label for="measurement-weight" class="text-sm font-medium"
+          >Poids (kg)</label
+        >
+        <input
+          id="measurement-weight"
+          v-model.number="newMeasurementWeight"
+          type="number"
+          min="0"
+          step="1"
+          class="border-grey-300 rounded-lg border bg-white px-3 py-2 focus:border-green-700 focus:outline-none"
+        />
+      </div>
+
+      <div class="flex flex-col gap-1">
+        <label for="measurement-size" class="text-sm font-medium"
+          >Taille (cm)</label
+        >
+        <input
+          id="measurement-size"
+          v-model.number="newMeasurementSize"
+          type="number"
+          min="0"
+          step="1"
+          class="border-grey-300 rounded-lg border bg-white px-3 py-2 focus:border-green-700 focus:outline-none"
+        />
+      </div>
+
+      <button
+        type="submit"
+        class="cursor-pointer rounded-lg bg-green-700 px-4 py-2 font-medium text-white transition-colors hover:bg-green-900 disabled:cursor-not-allowed disabled:opacity-50"
+        :disabled="isSubmitting"
+      >
+        {{ isSubmitting ? "Enregistrement..." : "Enregistrer la mesure" }}
+      </button>
     </form>
   </BasePopup>
 </template>
