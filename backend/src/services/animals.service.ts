@@ -1,11 +1,8 @@
 import { AppError } from "../types";
 import {
   animalsRepository,
-  appointmentsRepository,
-  treatmentsRepository,
-  heightRecordsRepository,
-  weightRecordsRepository,
-  caresRepository, microshipsRepository, speciesRepository,
+  microshipsRepository,
+  speciesRepository,
 } from "../repositories";
 import {Animal, CreateAnimalPayload, Microship, Specie, UpdateAnimalPayload} from "../schemas";
 
@@ -125,20 +122,7 @@ export const animalService = {
     if (!existingAnimal) throw new AppError("Animal not found", 404);
     if (role === "user" && existingAnimal.user_id !== callerId) throw new AppError("Access denied", 403);
 
-    const appointmentsCount = (await appointmentsRepository.findByAnimalId(animalId)).length;
-    const treatmentsCount = (await treatmentsRepository.findByAnimalId(animalId)).length;
-    const heightRecordsCount = (await heightRecordsRepository.findByAnimalId(animalId)).length;
-    const weightRecordsCount = (await weightRecordsRepository.findByAnimalId(animalId)).length;
-    const caresCount = (await caresRepository.findByAnimalId(animalId)).length;
-
-    if (appointmentsCount > 0) throw new AppError("Cannot delete animal: appointments associated", 409);
-    if (treatmentsCount > 0) throw new AppError("Cannot delete animal: treatments associated", 409);
-    if (heightRecordsCount > 0) throw new AppError("Cannot delete animal: height records associated", 409);
-    if (weightRecordsCount > 0) throw new AppError("Cannot delete animal: weight records associated", 409);
-    if (caresCount > 0) throw new AppError("Cannot delete animal: cares associated", 409);
-
-    return animalsRepository.delete(animalId);
+    return animalsRepository.deleteWithDependencies(animalId);
   },
 };
-
 
