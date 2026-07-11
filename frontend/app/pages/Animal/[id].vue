@@ -85,6 +85,11 @@ const authHeaders = computed(() => {
   return headers;
 });
 
+const getApiErrorMessage = (error: unknown, fallbackMessage: string) => {
+  const apiError = (error as { data?: { error?: unknown } })?.data?.error;
+  return typeof apiError === "string" ? apiError : fallbackMessage;
+};
+
 const animalPictureUrl = computed(() => {
   const path = animal.value?.profile_picture;
 
@@ -160,23 +165,6 @@ const formatDate = (date?: string) => {
   }
 
   return new Date(date).toLocaleDateString("fr-FR");
-};
-
-const getApiErrorMessage = (error: unknown, fallbackMessage: string) => {
-  if (
-    typeof error === "object" &&
-    error !== null &&
-    "data" in error &&
-    typeof (error as { data?: unknown }).data === "object" &&
-    (error as { data?: unknown }).data !== null &&
-    "error" in ((error as { data?: unknown }).data as Record<string, unknown>) &&
-    typeof ((error as { data?: unknown }).data as Record<string, unknown>).error ===
-      "string"
-  ) {
-    return ((error as { data?: unknown }).data as { error: string }).error;
-  }
-
-  return fallbackMessage;
 };
 
 const fetchCurrentAnimal = async () => {
@@ -334,12 +322,11 @@ const submitNewMeasurement = async () => {
     return;
   }
 
-  const hasWeight =
-    newMeasurementWeight.value !== null &&
-    Number.isFinite(newMeasurementWeight.value);
-  const hasSize =
-    newMeasurementSize.value !== null &&
-    Number.isFinite(newMeasurementSize.value);
+  const weightValue = newMeasurementWeight.value;
+  const sizeValue = newMeasurementSize.value;
+
+  const hasWeight = weightValue !== null && Number.isFinite(weightValue);
+  const hasSize = sizeValue !== null && Number.isFinite(sizeValue);
 
   if (!hasWeight && !hasSize) {
     newMeasurementError.value =
@@ -347,21 +334,13 @@ const submitNewMeasurement = async () => {
     return;
   }
 
-  if (
-    hasWeight &&
-    (!Number.isInteger(newMeasurementWeight.value) ||
-      newMeasurementWeight.value <= 0)
-  ) {
+  if (hasWeight && (!Number.isInteger(weightValue) || weightValue <= 0)) {
     newMeasurementError.value =
       "Le poids doit être un entier strictement positif.";
     return;
   }
 
-  if (
-    hasSize &&
-    (!Number.isInteger(newMeasurementSize.value) ||
-      newMeasurementSize.value <= 0)
-  ) {
+  if (hasSize && (!Number.isInteger(sizeValue) || sizeValue <= 0)) {
     newMeasurementError.value =
       "La taille doit être un entier strictement positif.";
     return;
