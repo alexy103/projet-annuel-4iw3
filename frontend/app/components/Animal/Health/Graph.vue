@@ -119,7 +119,7 @@ watch(
 
 <template>
   <div
-    class="relative size-40 rounded-2xl p-4 text-white shadow-lg"
+    class="relative aspect-square w-full max-w-40 rounded-2xl p-4 text-white shadow-lg"
     :class="config[type].bg"
   >
     <span class="absolute p-2 text-sm font-bold" :class="config[type].position">
