@@ -145,80 +145,6 @@ const handleSpeciesChange = (speciesName: string | number | null) => {
   species.value = selectedSpecies?.id ?? null;
 };
 
-const parsePositiveInteger = (rawValue: string) => {
-  if (!rawValue.trim()) {
-    return null;
-  }
-
-  const parsed = Number(rawValue);
-  if (!Number.isInteger(parsed) || parsed <= 0) {
-    return null;
-  }
-
-  return parsed;
-};
-
-const createInitialMeasurements = async (animalId: number) => {
-  const config = useRuntimeConfig();
-  const measurementDate =
-    adoptionDate.value || new Date().toISOString().slice(0, 10);
-
-  const parsedWeight = parsePositiveInteger(weight.value);
-  const parsedHeight = parsePositiveInteger(height.value);
-
-  const requests: Promise<Response>[] = [];
-
-  if (parsedWeight !== null) {
-    requests.push(
-      fetch(`${config.public.apiUrl}/weight-records`, {
-        method: "POST",
-        headers: {
-          ...getAuthHeaders(),
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          date: measurementDate,
-          weight: parsedWeight,
-          animal_id: animalId,
-        }),
-      }),
-    );
-  }
-
-  if (parsedHeight !== null) {
-    requests.push(
-      fetch(`${config.public.apiUrl}/height-records`, {
-        method: "POST",
-        headers: {
-          ...getAuthHeaders(),
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          date: measurementDate,
-          height: parsedHeight,
-          animal_id: animalId,
-        }),
-      }),
-    );
-  }
-
-  if (requests.length === 0) {
-    return;
-  }
-
-  const responses = await Promise.all(requests);
-
-  for (const response of responses) {
-    const result = await response.json();
-    if (!response.ok || !result.success) {
-      throw new Error(
-        result.error ||
-          "L'animal a été créé, mais les mesures initiales n'ont pas pu être enregistrées",
-      );
-    }
-  }
-};
-
 const handleAddAnimal = async () => {
   errorMessage.value = "";
 
@@ -292,8 +218,6 @@ const handleAddAnimal = async () => {
         );
       }
     }
-
-    await createInitialMeasurements(animalId);
 
     await userStore.fetchAnimals();
 
