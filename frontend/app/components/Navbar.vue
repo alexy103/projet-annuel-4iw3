@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { useAppointmentBookingPopup } from "~/composables/useAppointmentBookingPopup";
+
 type ApiResponse<T> = {
   success: boolean;
   data: T;
@@ -17,8 +19,13 @@ type AppointmentReason = {
 };
 
 const userStore = useUserStore();
-
-const showNewApt = ref(false);
+const {
+  isOpen: showNewApt,
+  prefilledDate,
+  open,
+  close,
+  clearPrefilledDate,
+} = useAppointmentBookingPopup();
 const isReady = ref(false);
 const isSubmittingAppointment = ref(false);
 const isLoadingLookups = ref(false);
@@ -197,7 +204,7 @@ const createAppointment = async () => {
 
     appointmentSuccessMessage.value = "Rendez-vous créé avec succès";
     resetAppointmentForm();
-    showNewApt.value = false;
+    close();
   } catch (error) {
     appointmentErrorMessage.value =
       error instanceof Error
@@ -220,6 +227,10 @@ watch(showNewApt, async (isOpen) => {
   if (isOpen) {
     appointmentErrorMessage.value = "";
 
+    if (prefilledDate.value) {
+      appointmentDate.value = prefilledDate.value;
+    }
+
     if (clinics.value.length === 0 || reasons.value.length === 0) {
       await loadAppointmentFormData();
     }
@@ -231,6 +242,7 @@ watch(showNewApt, async (isOpen) => {
   }
 
   resetAppointmentForm();
+  clearPrefilledDate();
 });
 </script>
 
@@ -249,7 +261,7 @@ watch(showNewApt, async (isOpen) => {
         <Icon
           name="solar:calendar-add-outline"
           class="ml-2 size-8 cursor-pointer text-black"
-          @click="showNewApt = true"
+          @click="open"
         />
       </div>
 
