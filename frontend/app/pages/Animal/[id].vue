@@ -99,6 +99,7 @@ const appointmentsErrorMessage = ref("");
 const appointments = ref<ApiAppointment[]>([]);
 const clinics = ref<ApiClinic[]>([]);
 const appointmentReasons = ref<ApiAppointmentReason[]>([]);
+const evolutionType = ref<"weight" | "size">("weight");
 
 const animalId = computed(() => {
   const param = route.params.animalId || route.params.id;
@@ -743,9 +744,11 @@ onMounted(async () => {
       </div>
     </BaseSection>
 
-    <div class="md:flex md:items-stretch md:gap-16">
+    <div class="flex flex-col gap-6 xl:flex-row xl:items-stretch xl:gap-16">
       <BaseSection title="Carnet de santé" color="blue">
-        <div class="grid grid-cols-2 justify-items-center gap-4 md:w-fit">
+        <div
+          class="grid grid-cols-2 justify-items-center gap-4 md:w-fit"
+        >
           <AnimalHealthGraph
             type="weight"
             :animal-id="animal.id"
@@ -774,15 +777,22 @@ onMounted(async () => {
         action="Nouvelle mesure"
         plus
         @action-click="showNewMeasurement = true"
-        class="md:flex md:flex-1 md:flex-col md:items-stretch"
+        class="xl:flex xl:flex-1 xl:flex-col xl:items-stretch"
       >
-        <div class="md:flex md:flex-1 md:flex-col md:items-stretch">
-          <div class="bg-grey-500 mb-2 h-40 w-full rounded-xl md:flex-1"></div>
+        <div class="xl:flex xl:flex-1 xl:flex-col xl:items-stretch">
+          <AnimalHealthEvolution
+            :animal-id="animal.id"
+            :type="evolutionType"
+            :refresh-key="healthDataRefreshKey"
+          />
 
           <AnimalStatsToggle
             class="mx-auto"
-            left-label="Nouvelle mesure"
-            right-label="Ancienne mesure"
+            v-model="evolutionType"
+            left-label="Taille"
+            right-label="Poids"
+            left-value="size"
+            right-value="weight"
           />
         </div>
       </BaseSection>
