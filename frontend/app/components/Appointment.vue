@@ -8,6 +8,7 @@ const props = defineProps<{
   time?: string;
   clinic?: string;
   compact?: boolean;
+  hideAnimal?: boolean;
 }>();
 
 const appointmentLink = computed(() => {
@@ -65,7 +66,7 @@ const displayClinic = computed(() => {
         class="absolute top-3 right-2 size-6"
       />
 
-      <p class="mb-1 pr-8 font-bold">{{ displayAnimal }}</p>
+      <p v-if="!hideAnimal" class="mb-1 pr-8 font-bold">{{ displayAnimal }}</p>
       <h1 class="mb-1 min-h-14 pr-8 font-bold">{{ displayType }}</h1>
       <span class="italic">{{ props.date || "14/10/2026" }}</span>
 

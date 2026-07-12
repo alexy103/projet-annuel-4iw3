@@ -27,6 +27,37 @@ type Species = {
   name: string;
 };
 
+type ApiAppointment = {
+  id: number;
+  date: string;
+  time: string;
+  reason_id: number;
+  is_completed: boolean;
+  user_id: number;
+  animal_id: number;
+  clinic_id: number;
+};
+
+type ApiClinic = {
+  id: number;
+  name: string;
+};
+
+type ApiAppointmentReason = {
+  id: number;
+  label: string;
+};
+
+type UpcomingAppointmentCard = {
+  id: number;
+  animal: string;
+  type: string;
+  date: string;
+  time: string;
+  clinic: string;
+  isToday: boolean;
+};
+
 const config = useRuntimeConfig();
 const route = useRoute();
 const router = useRouter();
@@ -63,10 +94,25 @@ const newMeasurementDate = ref(getTodayDateInputValue());
 const newMeasurementWeight = ref<number | null>(null);
 const newMeasurementSize = ref<number | null>(null);
 const healthDataRefreshKey = ref(0);
+const isLoadingAppointments = ref(false);
+const appointmentsErrorMessage = ref("");
+const appointments = ref<ApiAppointment[]>([]);
+const clinics = ref<ApiClinic[]>([]);
+const appointmentReasons = ref<ApiAppointmentReason[]>([]);
 
 const animalId = computed(() => {
   const param = route.params.animalId || route.params.id;
   return Array.isArray(param) ? param[0] : param;
+});
+
+const parsedAnimalId = computed<number | null>(() => {
+  const value = Number(animalId.value);
+
+  if (!Number.isInteger(value) || value <= 0) {
+    return null;
+  }
+
+  return value;
 });
 
 const authHeaders = computed(() => {
@@ -162,6 +208,87 @@ const formatDate = (date?: string) => {
   return new Date(date).toLocaleDateString("fr-FR");
 };
 
+const getDatePart = (rawDate: string): string => {
+  return rawDate.includes("T") ? (rawDate.split("T")[0] ?? rawDate) : rawDate;
+};
+
+const buildAppointmentDateTime = (rawDate: string, rawTime: string): Date => {
+  const [year = 1970, month = 1, day = 1] = getDatePart(rawDate)
+    .split("-")
+    .map(Number);
+  const [hours = 0, minutes = 0] = rawTime.split(":").map(Number);
+
+  return new Date(year, month - 1, day, hours, minutes);
+};
+
+const isSameDay = (a: Date, b: Date): boolean => {
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  );
+};
+
+const formatDateFr = (rawDate: string): string => {
+  const [year = 1970, month = 1, day = 1] = getDatePart(rawDate)
+    .split("-")
+    .map(Number);
+
+  return new Intl.DateTimeFormat("fr-FR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(new Date(year, month - 1, day));
+};
+
+const formatTimeFr = (rawTime: string): string => {
+  const [hours = "00", minutes = "00"] = rawTime.split(":");
+  return `${hours}h${minutes}`;
+};
+
+const upcomingAppointments = computed<UpcomingAppointmentCard[]>(() => {
+  if (!parsedAnimalId.value) {
+    return [];
+  }
+
+  const now = new Date();
+  const reasonsById = new Map(
+    appointmentReasons.value.map((reason) => [reason.id, reason.label]),
+  );
+  const clinicsById = new Map(clinics.value.map((clinic) => [clinic.id, clinic.name]));
+
+  return appointments.value
+    .filter((appointment) => {
+      return (
+        appointment.animal_id === parsedAnimalId.value && !appointment.is_completed
+      );
+    })
+    .map((appointment) => {
+      const startsAt = buildAppointmentDateTime(appointment.date, appointment.time);
+
+      return {
+        appointment,
+        startsAt,
+      };
+    })
+    .filter(({ startsAt }) => startsAt.getTime() >= now.getTime())
+    .sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime())
+    .slice(0, 4)
+    .map(({ appointment, startsAt }) => ({
+      id: appointment.id,
+      animal: animal.value?.name ?? `Animal #${appointment.animal_id}`,
+      type:
+        reasonsById.get(appointment.reason_id) ??
+        `Motif #${appointment.reason_id}`,
+      date: formatDateFr(appointment.date),
+      time: formatTimeFr(appointment.time),
+      clinic:
+        clinicsById.get(appointment.clinic_id) ??
+        `Clinique #${appointment.clinic_id}`,
+      isToday: isSameDay(startsAt, now),
+    }));
+});
+
 const getApiErrorMessage = (error: unknown, fallbackMessage: string) => {
   if (
     typeof error === "object" &&
@@ -219,6 +346,77 @@ const fetchSpecies = async () => {
   } catch (error) {
     console.error(error);
     errorMessage.value = "Impossible de charger les espèces.";
+  }
+};
+
+const fetchAppointmentsData = async () => {
+  appointmentsErrorMessage.value = "";
+  isLoadingAppointments.value = true;
+
+  try {
+    const [appointmentsResponse, clinicsResponse, reasonsResponse] =
+      await Promise.all([
+        fetch(`${config.public.apiUrl}/appointments`, {
+          method: "GET",
+          headers: {
+            ...authHeaders.value,
+            "Content-Type": "application/json",
+          },
+        }),
+        fetch(`${config.public.apiUrl}/clinics`, {
+          method: "GET",
+          headers: {
+            ...authHeaders.value,
+            "Content-Type": "application/json",
+          },
+        }),
+        fetch(`${config.public.apiUrl}/appointment-reasons`, {
+          method: "GET",
+          headers: {
+            ...authHeaders.value,
+            "Content-Type": "application/json",
+          },
+        }),
+      ]);
+
+    const appointmentsResult =
+      (await appointmentsResponse.json()) as ApiResponse<ApiAppointment[]>;
+    const clinicsResult = (await clinicsResponse.json()) as ApiResponse<
+      ApiClinic[]
+    >;
+    const reasonsResult = (await reasonsResponse.json()) as ApiResponse<
+      ApiAppointmentReason[]
+    >;
+
+    if (!appointmentsResponse.ok || !appointmentsResult.success) {
+      throw new Error(
+        appointmentsResult.message ||
+          "Impossible de charger les rendez-vous de cet animal.",
+      );
+    }
+
+    if (!clinicsResponse.ok || !clinicsResult.success) {
+      throw new Error(
+        clinicsResult.message || "Impossible de charger les cliniques.",
+      );
+    }
+
+    if (!reasonsResponse.ok || !reasonsResult.success) {
+      throw new Error(
+        reasonsResult.message || "Impossible de charger les motifs.",
+      );
+    }
+
+    appointments.value = appointmentsResult.data;
+    clinics.value = clinicsResult.data;
+    appointmentReasons.value = reasonsResult.data;
+  } catch (error) {
+    appointmentsErrorMessage.value = getApiErrorMessage(
+      error,
+      "Impossible de charger les rendez-vous.",
+    );
+  } finally {
+    isLoadingAppointments.value = false;
   }
 };
 
@@ -439,7 +637,7 @@ watch(showInfo, (isOpen) => {
 onMounted(async () => {
   isLoading.value = true;
 
-  await Promise.all([fetchCurrentAnimal(), fetchSpecies()]);
+  await Promise.all([fetchCurrentAnimal(), fetchSpecies(), fetchAppointmentsData()]);
 
   isLoading.value = false;
 });
@@ -513,7 +711,35 @@ onMounted(async () => {
 
     <BaseSection title="À venir" action="Tout voir" link="/calendar">
       <div class="-mx-4 flex gap-2 overflow-x-auto px-4">
-        <Appointment v-for="i in 4" :key="i" />
+        <div v-if="isLoadingAppointments" class="py-2 text-sm text-gray-600">
+          Chargement des rendez-vous...
+        </div>
+
+        <div
+          v-else-if="appointmentsErrorMessage"
+          class="py-2 text-sm text-red-600"
+        >
+          {{ appointmentsErrorMessage }}
+        </div>
+
+        <div v-else-if="upcomingAppointments.length === 0" class="py-2 text-sm text-gray-600">
+          Aucun rendez-vous à venir pour cet animal.
+        </div>
+
+        <Appointment
+          v-for="appointment in upcomingAppointments"
+          v-else
+          :key="appointment.id"
+          compact
+          hide-animal
+          :id="appointment.id"
+          :animal="appointment.animal"
+          :type="appointment.type"
+          :date="appointment.date"
+          :time="appointment.time"
+          :clinic="appointment.clinic"
+          :today="appointment.isToday"
+        />
       </div>
     </BaseSection>
 
