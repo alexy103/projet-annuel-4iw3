@@ -57,7 +57,9 @@ const displayClinic = computed(() => {
     <p class="truncate text-right">{{ displayType }}</p>
   </NuxtLink>
   <NuxtLink v-else :to="appointmentLink" class="rounded-xl">
-    <article class="relative flex h-44 w-45 shrink-0 flex-col rounded-xl bg-green-300 p-3">
+    <article
+      class="relative flex h-44 w-45 shrink-0 flex-col rounded-xl bg-green-300 p-3"
+    >
       <Icon
         name="material-symbols:arrow-right-alt-rounded"
         class="absolute top-3 right-2 size-6"

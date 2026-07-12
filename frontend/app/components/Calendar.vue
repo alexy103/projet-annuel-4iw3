@@ -11,11 +11,7 @@ const emit = defineEmits<{
 
 const today = new Date();
 const value = shallowRef(
-  new CalendarDate(
-    today.getFullYear(),
-    today.getMonth() + 1,
-    today.getDate(),
-  ),
+  new CalendarDate(today.getFullYear(), today.getMonth() + 1, today.getDate()),
 );
 const placeholder = shallowRef(
   new CalendarDate(today.getFullYear(), today.getMonth() + 1, 1),

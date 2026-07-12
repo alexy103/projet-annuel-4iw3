@@ -119,18 +119,26 @@ const mapToCard = (
   const animalsById = new Map(
     userStore.animals.map((animal) => [animal.id, animal.name]),
   );
-  const clinicsById = new Map(clinics.value.map((clinic) => [clinic.id, clinic.name]));
+  const clinicsById = new Map(
+    clinics.value.map((clinic) => [clinic.id, clinic.name]),
+  );
   const reasonsById = new Map(
     appointmentReasons.value.map((reason) => [reason.id, reason.label]),
   );
 
   return {
     id: appointment.id,
-    animal: animalsById.get(appointment.animal_id) ?? `Animal #${appointment.animal_id}`,
-    type: reasonsById.get(appointment.reason_id) ?? `Motif #${appointment.reason_id}`,
+    animal:
+      animalsById.get(appointment.animal_id) ??
+      `Animal #${appointment.animal_id}`,
+    type:
+      reasonsById.get(appointment.reason_id) ??
+      `Motif #${appointment.reason_id}`,
     date: formatDateFr(appointment.date),
     time: formatTimeFr(appointment.time),
-    clinic: clinicsById.get(appointment.clinic_id) ?? `Clinique #${appointment.clinic_id}`,
+    clinic:
+      clinicsById.get(appointment.clinic_id) ??
+      `Clinique #${appointment.clinic_id}`,
     isToday: isSameDay(startsAt, now),
   };
 };
@@ -184,10 +192,12 @@ const fetchCalendarData = async () => {
 
     const appointmentsResult =
       (await appointmentsResponse.json()) as ApiResponse<ApiAppointment[]>;
-    const clinicsResult =
-      (await clinicsResponse.json()) as ApiResponse<ApiClinic[]>;
-    const reasonsResult =
-      (await reasonsResponse.json()) as ApiResponse<ApiAppointmentReason[]>;
+    const clinicsResult = (await clinicsResponse.json()) as ApiResponse<
+      ApiClinic[]
+    >;
+    const reasonsResult = (await reasonsResponse.json()) as ApiResponse<
+      ApiAppointmentReason[]
+    >;
 
     if (!appointmentsResponse.ok || !appointmentsResult.success) {
       throw new Error(
@@ -196,11 +206,15 @@ const fetchCalendarData = async () => {
     }
 
     if (!clinicsResponse.ok || !clinicsResult.success) {
-      throw new Error(clinicsResult.error || "Impossible de charger les cliniques");
+      throw new Error(
+        clinicsResult.error || "Impossible de charger les cliniques",
+      );
     }
 
     if (!reasonsResponse.ok || !reasonsResult.success) {
-      throw new Error(reasonsResult.error || "Impossible de charger les motifs");
+      throw new Error(
+        reasonsResult.error || "Impossible de charger les motifs",
+      );
     }
 
     appointments.value = appointmentsResult.data;
@@ -228,8 +242,13 @@ onMounted(async () => {
 <template>
   <BaseSection title="Mes prochains RDV" class="space-y-2">
     <p v-if="isLoading" class="text-sm text-gray-600">Chargement...</p>
-    <p v-else-if="errorMessage" class="text-sm text-red-600">{{ errorMessage }}</p>
-    <p v-else-if="upcomingAppointments.length === 0" class="text-sm text-gray-600">
+    <p v-else-if="errorMessage" class="text-sm text-red-600">
+      {{ errorMessage }}
+    </p>
+    <p
+      v-else-if="upcomingAppointments.length === 0"
+      class="text-sm text-gray-600"
+    >
       Aucun rendez-vous à venir.
     </p>
     <Appointment
@@ -253,7 +272,9 @@ onMounted(async () => {
   </BaseSection>
   <BaseSection title="Mes RDV passés" class="space-y-2">
     <p v-if="isLoading" class="text-sm text-gray-600">Chargement...</p>
-    <p v-else-if="errorMessage" class="text-sm text-red-600">{{ errorMessage }}</p>
+    <p v-else-if="errorMessage" class="text-sm text-red-600">
+      {{ errorMessage }}
+    </p>
     <p v-else-if="pastAppointments.length === 0" class="text-sm text-gray-600">
       Aucun rendez-vous passé.
     </p>
