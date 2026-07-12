@@ -1,8 +1,208 @@
 <script setup lang="ts">
+type ApiResponse<T> = {
+  success: boolean;
+  data: T;
+  error?: string;
+};
+
+type ApiAppointment = {
+  id: number;
+  date: string;
+  time: string;
+  reason_id: number;
+  is_completed: boolean;
+  user_id: number;
+  animal_id: number;
+  clinic_id: number;
+};
+
+type ApiClinic = {
+  id: number;
+  name: string;
+};
+
+type ApiAppointmentReason = {
+  id: number;
+  label: string;
+};
+
+type UpcomingAppointmentCard = {
+  id: number;
+  animal: string;
+  type: string;
+  date: string;
+  time: string;
+  clinic: string;
+  isToday: boolean;
+};
+
 const userStore = useUserStore();
 const profilePicture = ref<string | null>(null);
 const isLoading = ref(false);
 const isReady = ref(false);
+const isLoadingAppointments = ref(false);
+const appointmentsErrorMessage = ref("");
+
+const appointments = ref<ApiAppointment[]>([]);
+const clinics = ref<ApiClinic[]>([]);
+const appointmentReasons = ref<ApiAppointmentReason[]>([]);
+
+const getAuthHeaders = () => {
+  const config = useRuntimeConfig();
+  const accessToken = localStorage.getItem("accessToken");
+
+  return {
+    "x-api-key": config.public.apiKey,
+    Authorization: `Bearer ${accessToken}`,
+    "Content-Type": "application/json",
+  };
+};
+
+const getDatePart = (rawDate: string): string => {
+  return rawDate.includes("T") ? rawDate.split("T")[0] : rawDate;
+};
+
+const buildAppointmentDateTime = (rawDate: string, rawTime: string): Date => {
+  const datePart = getDatePart(rawDate);
+  const [year, month, day] = datePart.split("-").map(Number);
+  const [hours, minutes] = rawTime.split(":").map(Number);
+
+  return new Date(year, month - 1, day, hours ?? 0, minutes ?? 0);
+};
+
+const isSameDay = (a: Date, b: Date): boolean => {
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  );
+};
+
+const formatDateFr = (rawDate: string): string => {
+  const datePart = getDatePart(rawDate);
+  const [year, month, day] = datePart.split("-").map(Number);
+  const date = new Date(year, month - 1, day);
+
+  return new Intl.DateTimeFormat("fr-FR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(date);
+};
+
+const formatTimeFr = (rawTime: string): string => {
+  const [hours = "00", minutes = "00"] = rawTime.split(":");
+  return `${hours}h${minutes}`;
+};
+
+const upcomingAppointments = computed<UpcomingAppointmentCard[]>(() => {
+  const now = new Date();
+
+  const clinicsById = new Map(
+    clinics.value.map((clinic) => [clinic.id, clinic]),
+  );
+  const reasonsById = new Map(
+    appointmentReasons.value.map((reason) => [reason.id, reason]),
+  );
+  const animalsById = new Map(
+    userStore.animals.map((animal) => [animal.id, animal]),
+  );
+
+  return appointments.value
+    .filter((appointment) => !appointment.is_completed)
+    .map((appointment) => {
+      const startsAt = buildAppointmentDateTime(
+        appointment.date,
+        appointment.time,
+      );
+
+      return {
+        appointment,
+        startsAt,
+      };
+    })
+    .filter(({ startsAt }) => startsAt.getTime() >= now.getTime())
+    .sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime())
+    .slice(0, 4)
+    .map(({ appointment, startsAt }) => ({
+      id: appointment.id,
+      animal:
+        animalsById.get(appointment.animal_id)?.name ??
+        `Animal #${appointment.animal_id}`,
+      type:
+        reasonsById.get(appointment.reason_id)?.label ??
+        `Motif #${appointment.reason_id}`,
+      date: formatDateFr(appointment.date),
+      time: formatTimeFr(appointment.time),
+      clinic:
+        clinicsById.get(appointment.clinic_id)?.name ??
+        `Clinique #${appointment.clinic_id}`,
+      isToday: isSameDay(startsAt, now),
+    }));
+});
+
+const fetchAppointmentsData = async () => {
+  appointmentsErrorMessage.value = "";
+  isLoadingAppointments.value = true;
+
+  try {
+    const config = useRuntimeConfig();
+
+    const [appointmentsResponse, clinicsResponse, reasonsResponse] =
+      await Promise.all([
+        fetch(`${config.public.apiUrl}/appointments`, {
+          method: "GET",
+          headers: getAuthHeaders(),
+        }),
+        fetch(`${config.public.apiUrl}/clinics`, {
+          method: "GET",
+          headers: getAuthHeaders(),
+        }),
+        fetch(`${config.public.apiUrl}/appointment-reasons`, {
+          method: "GET",
+          headers: getAuthHeaders(),
+        }),
+      ]);
+
+    const appointmentsResult =
+      (await appointmentsResponse.json()) as ApiResponse<ApiAppointment[]>;
+    const clinicsResult = (await clinicsResponse.json()) as ApiResponse<
+      ApiClinic[]
+    >;
+    const reasonsResult = (await reasonsResponse.json()) as ApiResponse<
+      ApiAppointmentReason[]
+    >;
+
+    if (!appointmentsResponse.ok || !appointmentsResult.success) {
+      throw new Error(
+        appointmentsResult.error || "Impossible de charger les rendez-vous",
+      );
+    }
+
+    if (!clinicsResponse.ok || !clinicsResult.success) {
+      throw new Error(
+        clinicsResult.error || "Impossible de charger les cliniques",
+      );
+    }
+
+    if (!reasonsResponse.ok || !reasonsResult.success) {
+      throw new Error(
+        reasonsResult.error || "Impossible de charger les motifs",
+      );
+    }
+
+    appointments.value = appointmentsResult.data;
+    clinics.value = clinicsResult.data;
+    appointmentReasons.value = reasonsResult.data;
+  } catch (error) {
+    appointmentsErrorMessage.value =
+      error instanceof Error
+        ? error.message
+        : "Impossible de charger les rendez-vous";
+  } finally {
+    isLoadingAppointments.value = false;
+  }
+};
 
 definePageMeta({
   // layout: "onboarding",
@@ -11,6 +211,7 @@ definePageMeta({
 onMounted(async () => {
   await userStore.fetchCurrentUser?.();
   await userStore.fetchAnimals?.();
+  await fetchAppointmentsData();
 
   isReady.value = true;
 });
@@ -60,7 +261,37 @@ const handleProfilePictureUpload = (event: Event) => {
 
     <BaseSection title="À venir" action="Tout voir" link="/calendar">
       <div class="-mx-4 flex gap-2 overflow-x-auto px-4">
-        <Appointment v-for="i in 4" :key="i" />
+        <div v-if="isLoadingAppointments" class="py-2 text-sm text-gray-600">
+          Chargement des rendez-vous...
+        </div>
+
+        <div
+          v-else-if="appointmentsErrorMessage"
+          class="py-2 text-sm text-red-600"
+        >
+          {{ appointmentsErrorMessage }}
+        </div>
+
+        <div
+          v-else-if="upcomingAppointments.length === 0"
+          class="py-2 text-sm text-gray-600"
+        >
+          Aucun rendez-vous à venir.
+        </div>
+
+        <Appointment
+          v-for="appointment in upcomingAppointments"
+          v-else
+          :key="appointment.id"
+          compact
+          :id="appointment.id"
+          :animal="appointment.animal"
+          :type="appointment.type"
+          :date="appointment.date"
+          :time="appointment.time"
+          :clinic="appointment.clinic"
+          :today="appointment.isToday"
+        />
       </div>
     </BaseSection>
 
