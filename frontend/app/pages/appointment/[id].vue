@@ -359,7 +359,7 @@ const saveAppointment = async () => {
         </div>
 
         <span
-          class="text-background button cursor-default! shadow"
+          class="text-background button cursor-default! whitespace-nowrap shadow"
           :class="appointmentStatusClass"
         >
           {{ appointmentStatus }}
