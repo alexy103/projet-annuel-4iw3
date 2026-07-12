@@ -4,8 +4,50 @@ import { Appointment, Availability, CreateAppointmentPayload, UpdateAppointmentP
 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
+function parseDateOnlyString(value: string): { year: number; month: number; day: number } | null {
+	const datePart = value.includes('T') ? (value.split('T')[0] ?? value) : value;
+	const [yearPart, monthPart, dayPart] = datePart.split('-');
+
+	if (!yearPart || !monthPart || !dayPart) {
+		return null;
+	}
+
+	const year = Number(yearPart);
+	const month = Number(monthPart);
+	const day = Number(dayPart);
+
+	if (!Number.isInteger(year) || !Number.isInteger(month) || !Number.isInteger(day)) {
+		return null;
+	}
+
+	if (yearPart.length !== 4 || monthPart.length !== 2 || dayPart.length !== 2) {
+		return null;
+	}
+
+	const utcDate = new Date(Date.UTC(year, month - 1, day));
+	if (utcDate.getUTCFullYear() !== year || utcDate.getUTCMonth() + 1 !== month || utcDate.getUTCDate() !== day) {
+		return null;
+	}
+
+	return { year, month, day };
+}
+
 function toValidDate(date: Date | string): Date {
-	const parsedDate = date instanceof Date ? date : new Date(date);
+	if (typeof date === 'string') {
+		const dateOnly = parseDateOnlyString(date);
+		if (dateOnly) {
+			return new Date(Date.UTC(dateOnly.year, dateOnly.month - 1, dateOnly.day));
+		}
+
+		const parsedDate = new Date(date);
+		if (Number.isNaN(parsedDate.getTime())) {
+			throw new AppError('Invalid appointment date', 400);
+		}
+
+		return parsedDate;
+	}
+
+	const parsedDate = date;
 
 	if (Number.isNaN(parsedDate.getTime())) {
 		throw new AppError('Invalid appointment date', 400);
@@ -15,6 +57,17 @@ function toValidDate(date: Date | string): Date {
 }
 
 function toDateOnlyString(date: Date | string): string {
+	if (typeof date === 'string') {
+		const dateOnly = parseDateOnlyString(date);
+		if (!dateOnly) {
+			throw new AppError('Invalid appointment date', 400);
+		}
+
+		const month = `${dateOnly.month}`.padStart(2, '0');
+		const day = `${dateOnly.day}`.padStart(2, '0');
+		return `${dateOnly.year}-${month}-${day}`;
+	}
+
 	return toValidDate(date).toISOString().substring(0, 10);
 }
 
