@@ -237,10 +237,12 @@ const handleAddAnimal = async () => {
   <form class="space-y-6" @submit.prevent="handleAddAnimal">
     <h1 class="mt-2 text-2xl font-bold">Qui rejoint la famille ?</h1>
 
-    <div class="flex items-center justify-around gap-4">
-      <BaseInput v-model="name" label="Nom" />
+    <div class="grid grid-cols-2 items-start gap-4">
+      <div class="w-full max-w-48 justify-self-center">
+        <BaseInput v-model="name" label="Nom" />
+      </div>
 
-      <div class="flex items-center justify-between gap-2">
+      <div class="flex items-center justify-center gap-2">
         <button
           type="button"
           class="flex size-12 cursor-pointer items-center justify-center rounded-full"
@@ -261,31 +263,37 @@ const handleAddAnimal = async () => {
       </div>
     </div>
 
-    <div class="flex items-center justify-around gap-4">
-      <BaseSelect
-        id="species"
-        label="Espèce"
-        :model-value="selectedSpeciesName"
-        :options="speciesOptions"
-        :disabled="isLoadingSpecies"
-        @update:model-value="handleSpeciesChange"
-      />
+    <div class="grid grid-cols-2 items-start gap-4">
+      <div class="w-full max-w-48 justify-self-center">
+        <BaseSelect
+          id="species"
+          label="Espèce"
+          :model-value="selectedSpeciesName"
+          :options="speciesOptions"
+          :disabled="isLoadingSpecies"
+          addClass="w-full"
+          @update:model-value="handleSpeciesChange"
+        />
+      </div>
 
-      <BaseSelect
-        v-if="hasBreedOptions"
-        id="breed"
-        label="Race"
-        v-model="breed"
-        :options="breedOptions"
-        :disabled="isSpeciesEmpty"
-      />
+      <div class="w-full max-w-48 justify-self-center">
+        <BaseSelect
+          v-if="hasBreedOptions"
+          id="breed"
+          label="Race"
+          v-model="breed"
+          :options="breedOptions"
+          :disabled="isSpeciesEmpty"
+          addClass="w-full"
+        />
 
-      <BaseInput
-        v-else
-        v-model="breed"
-        label="Race"
-        :disabled="isSpeciesEmpty"
-      />
+        <BaseInput
+          v-else
+          v-model="breed"
+          label="Race"
+          :disabled="isSpeciesEmpty"
+        />
+      </div>
     </div>
 
     <div class="space-y-2">
