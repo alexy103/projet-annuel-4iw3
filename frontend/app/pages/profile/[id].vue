@@ -15,6 +15,12 @@ type UserPublic = {
   onboarding_completed?: boolean;
 };
 
+type TreatmentType = {
+  id: number;
+  user_id: number;
+  name: string;
+};
+
 const route = useRoute();
 const config = useRuntimeConfig();
 const userStore = useUserStore();
@@ -31,6 +37,14 @@ const profilePictureFile = ref<File | null>(null);
 
 const notificationsPush = ref(true);
 const nightMode = ref(false);
+
+const treatmentTypes = ref<TreatmentType[]>([]);
+const newTreatmentTypeName = ref("");
+const editingTreatmentTypeId = ref<number | null>(null);
+const editingTreatmentTypeName = ref("");
+const isLoadingTreatmentTypes = ref(false);
+const isSavingTreatmentType = ref(false);
+const treatmentTypeErrorMessage = ref("");
 
 const authHeaders = computed(() => {
   const headers: Record<string, string> = {
@@ -178,6 +192,144 @@ const handleSave = async () => {
   }
 };
 
+const fetchTreatmentTypes = async () => {
+  treatmentTypeErrorMessage.value = "";
+  isLoadingTreatmentTypes.value = true;
+
+  try {
+    const response = await $fetch<ApiResponse<TreatmentType[]>>(
+      `${config.public.apiUrl}/treatment-types`,
+      {
+        headers: authHeaders.value,
+      },
+    );
+
+    treatmentTypes.value = response.data.sort((a, b) => {
+      return a.name.localeCompare(b.name, "fr");
+    });
+  } catch (error) {
+    console.error(error);
+    treatmentTypeErrorMessage.value =
+      "Impossible de charger les types de traitement.";
+  } finally {
+    isLoadingTreatmentTypes.value = false;
+  }
+};
+
+const createTreatmentType = async () => {
+  const name = newTreatmentTypeName.value.trim();
+
+  if (!name) {
+    treatmentTypeErrorMessage.value =
+      "Le nom du type de traitement est obligatoire.";
+    return;
+  }
+
+  treatmentTypeErrorMessage.value = "";
+  isSavingTreatmentType.value = true;
+
+  try {
+    await $fetch<ApiResponse<TreatmentType>>(
+      `${config.public.apiUrl}/treatment-types`,
+      {
+        method: "POST",
+        headers: {
+          ...authHeaders.value,
+          "Content-Type": "application/json",
+        },
+        body: {
+          name,
+        },
+      },
+    );
+
+    newTreatmentTypeName.value = "";
+    await fetchTreatmentTypes();
+  } catch (error) {
+    console.error(error);
+    treatmentTypeErrorMessage.value =
+      "Impossible d'ajouter ce type de traitement.";
+  } finally {
+    isSavingTreatmentType.value = false;
+  }
+};
+
+const startEditingTreatmentType = (type: TreatmentType) => {
+  editingTreatmentTypeId.value = type.id;
+  editingTreatmentTypeName.value = type.name;
+  treatmentTypeErrorMessage.value = "";
+};
+
+const cancelEditingTreatmentType = () => {
+  editingTreatmentTypeId.value = null;
+  editingTreatmentTypeName.value = "";
+};
+
+const saveTreatmentType = async (typeId: number) => {
+  const name = editingTreatmentTypeName.value.trim();
+
+  if (!name) {
+    treatmentTypeErrorMessage.value =
+      "Le nom du type de traitement est obligatoire.";
+    return;
+  }
+
+  treatmentTypeErrorMessage.value = "";
+  isSavingTreatmentType.value = true;
+
+  try {
+    await $fetch<ApiResponse<TreatmentType>>(
+      `${config.public.apiUrl}/treatment-types/${typeId}`,
+      {
+        method: "PUT",
+        headers: {
+          ...authHeaders.value,
+          "Content-Type": "application/json",
+        },
+        body: {
+          name,
+        },
+      },
+    );
+
+    cancelEditingTreatmentType();
+    await fetchTreatmentTypes();
+  } catch (error) {
+    console.error(error);
+    treatmentTypeErrorMessage.value =
+      "Impossible de modifier ce type de traitement.";
+  } finally {
+    isSavingTreatmentType.value = false;
+  }
+};
+
+const deleteTreatmentType = async (typeId: number) => {
+  treatmentTypeErrorMessage.value = "";
+  isSavingTreatmentType.value = true;
+
+  try {
+    await $fetch<ApiResponse<TreatmentType>>(
+      `${config.public.apiUrl}/treatment-types/${typeId}`,
+      {
+        method: "DELETE",
+        headers: authHeaders.value,
+      },
+    );
+
+    if (editingTreatmentTypeId.value === typeId) {
+      cancelEditingTreatmentType();
+    }
+
+    await fetchTreatmentTypes();
+  } catch (error) {
+    console.error(error);
+    treatmentTypeErrorMessage.value =
+      "Impossible de supprimer ce type de traitement.";
+  } finally {
+    isSavingTreatmentType.value = false;
+  }
+};
+
 const handleLogout = async () => {
   const accessToken = localStorage.getItem("accessToken");
 
@@ -218,7 +370,7 @@ onMounted(async () => {
 
   nightMode.value = localStorage.getItem("nightMode") === "true";
 
-  await fetchMe();
+  await Promise.all([fetchMe(), fetchTreatmentTypes()]);
 
   isLoading.value = false;
 });
@@ -282,6 +434,100 @@ onUnmounted(() => {
           <p>Mode nuit</p>
           <BaseToggle v-model="nightMode" />
         </div>
+      </BaseSection>
+
+      <BaseSection title="Types de traitement" class="space-y-4">
+        <div class="flex flex-col gap-3 md:flex-row md:items-end">
+          <div class="w-full md:flex-1">
+            <BaseInput
+              v-model="newTreatmentTypeName"
+              label="Nouveau type"
+              placeholder="Ex: Vaccination"
+            />
+          </div>
+
+          <BaseButton
+            class="flex justify-center"
+            :class="{ 'pointer-events-none opacity-50': isSavingTreatmentType }"
+            @click="createTreatmentType"
+          >
+            Ajouter
+          </BaseButton>
+        </div>
+
+        <p v-if="isLoadingTreatmentTypes" class="text-sm text-gray-600">
+          Chargement des types de traitement...
+        </p>
+
+        <p
+          v-else-if="treatmentTypes.length === 0"
+          class="text-sm text-gray-600"
+        >
+          Aucun type de traitement pour le moment.
+        </p>
+
+        <div v-else class="space-y-2">
+          <div
+            v-for="type in treatmentTypes"
+            :key="type.id"
+            class="bg-background flex flex-col gap-2 rounded-xl border border-black/20 p-3 md:flex-row md:items-center"
+          >
+            <div
+              v-if="editingTreatmentTypeId === type.id"
+              class="w-full md:flex-1"
+            >
+              <BaseInput v-model="editingTreatmentTypeName" />
+            </div>
+
+            <p v-else class="font-semibold md:flex-1">{{ type.name }}</p>
+
+            <div class="flex items-center gap-2">
+              <template v-if="editingTreatmentTypeId === type.id">
+                <button
+                  type="button"
+                  class="button text-background bg-green-500"
+                  :disabled="isSavingTreatmentType"
+                  @click="saveTreatmentType(type.id)"
+                >
+                  Enregistrer
+                </button>
+
+                <button
+                  type="button"
+                  class="button bg-grey-500 text-black"
+                  :disabled="isSavingTreatmentType"
+                  @click="cancelEditingTreatmentType"
+                >
+                  Annuler
+                </button>
+              </template>
+
+              <template v-else>
+                <button
+                  type="button"
+                  class="button text-background bg-blue-500"
+                  :disabled="isSavingTreatmentType"
+                  @click="startEditingTreatmentType(type)"
+                >
+                  Modifier
+                </button>
+
+                <button
+                  type="button"
+                  class="button bg-red text-background"
+                  :disabled="isSavingTreatmentType"
+                  @click="deleteTreatmentType(type.id)"
+                >
+                  Supprimer
+                </button>
+              </template>
+            </div>
+          </div>
+        </div>
+
+        <p v-if="treatmentTypeErrorMessage" class="text-sm text-red-600">
+          {{ treatmentTypeErrorMessage }}
+        </p>
       </BaseSection>
 
       <div class="flex items-center justify-center gap-4">
