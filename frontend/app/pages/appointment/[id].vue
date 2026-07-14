@@ -35,6 +35,30 @@ type ApiAppointmentReason = {
   label: string;
 };
 
+type Availability = {
+  id: number;
+  clinic_id: number;
+  day: string;
+  opening: number;
+  closing: number;
+  slot_rules: unknown;
+};
+
+type SlotRules = {
+  interval: number;
+  capacity?: number;
+  break?: {
+    start: number;
+    end: number;
+  };
+};
+
+type TimeSlot = {
+  time: string;
+  remaining: number;
+  isFull: boolean;
+};
+
 type AppointmentDetails = {
   id: number;
   animal: string;
@@ -61,6 +85,12 @@ const isEditing = ref(false);
 const editedDate = ref("");
 const editedTime = ref("");
 const editedRemark = ref("");
+const editTimeSlots = ref<TimeSlot[]>([]);
+const isLoadingEditTimeSlots = ref(false);
+
+const availableEditTimeSlots = computed(() => {
+  return editTimeSlots.value.filter((slot) => !slot.isFull);
+});
 
 const getAuthHeaders = () => {
   const config = useRuntimeConfig();
@@ -75,6 +105,230 @@ const getAuthHeaders = () => {
 
 const getDatePart = (rawDate: string): string => {
   return rawDate.includes("T") ? (rawDate.split("T")[0] ?? rawDate) : rawDate;
+};
+
+const normalizeTimeToHourMinute = (rawTime: string): string => {
+  const [hours = "00", minutes = "00"] = rawTime.split(":");
+  return `${hours.padStart(2, "0")}:${minutes.padStart(2, "0")}`;
+};
+
+const parseSlotRules = (rawRules: unknown): SlotRules | null => {
+  if (typeof rawRules !== "object" || rawRules === null) {
+    return null;
+  }
+
+  const interval = Number((rawRules as { interval?: unknown }).interval);
+  const capacity = Number((rawRules as { capacity?: unknown }).capacity ?? 1);
+  const rawBreak = (rawRules as { break?: unknown }).break;
+
+  if (!Number.isInteger(interval) || interval <= 0) {
+    return null;
+  }
+
+  const parsedRules: SlotRules = {
+    interval,
+    capacity: Number.isInteger(capacity) && capacity > 0 ? capacity : 1,
+  };
+
+  if (typeof rawBreak === "object" && rawBreak !== null) {
+    const breakStart = Number((rawBreak as { start?: unknown }).start);
+    const breakEnd = Number((rawBreak as { end?: unknown }).end);
+
+    if (
+      Number.isFinite(breakStart) &&
+      Number.isFinite(breakEnd) &&
+      breakStart < breakEnd
+    ) {
+      parsedRules.break = {
+        start: breakStart,
+        end: breakEnd,
+      };
+    }
+  }
+
+  return parsedRules;
+};
+
+const formatMinutesAsTime = (minutesFromMidnight: number): string => {
+  const hours = Math.floor(minutesFromMidnight / 60)
+    .toString()
+    .padStart(2, "0");
+  const minutes = (minutesFromMidnight % 60).toString().padStart(2, "0");
+
+  return `${hours}:${minutes}`;
+};
+
+const normalizeDayName = (day: string): string => {
+  return day
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLowerCase()
+    .trim();
+};
+
+const getDayCandidates = (date: string): string[] => {
+  const [year = 1970, month = 1, day = 1] = getDatePart(date)
+    .split("-")
+    .map(Number);
+  const dayIndex = new Date(year, month - 1, day).getDay();
+
+  const englishDayNames = [
+    "sunday",
+    "monday",
+    "tuesday",
+    "wednesday",
+    "thursday",
+    "friday",
+    "saturday",
+  ];
+  const frenchDayNames = [
+    "dimanche",
+    "lundi",
+    "mardi",
+    "mercredi",
+    "jeudi",
+    "vendredi",
+    "samedi",
+  ];
+
+  return [englishDayNames[dayIndex] ?? "", frenchDayNames[dayIndex] ?? ""];
+};
+
+const buildTimeSlots = (
+  availability: Availability,
+  rules: SlotRules,
+  bookedByTime: Map<string, number>,
+): TimeSlot[] => {
+  const openMinutes = availability.opening * 60;
+  const closeMinutes = availability.closing * 60;
+  const breakStart = rules.break ? rules.break.start * 60 : null;
+  const breakEnd = rules.break ? rules.break.end * 60 : null;
+  const capacity = rules.capacity ?? 1;
+  const slots: TimeSlot[] = [];
+
+  for (
+    let slotStart = openMinutes;
+    slotStart + rules.interval <= closeMinutes;
+    slotStart += rules.interval
+  ) {
+    if (breakStart !== null && breakEnd !== null) {
+      const isInBreak = slotStart >= breakStart && slotStart < breakEnd;
+      if (isInBreak) {
+        continue;
+      }
+    }
+
+    const slotTime = formatMinutesAsTime(slotStart);
+    const booked = bookedByTime.get(slotTime) ?? 0;
+    const remaining = Math.max(0, capacity - booked);
+
+    slots.push({
+      time: slotTime,
+      remaining,
+      isFull: remaining <= 0,
+    });
+  }
+
+  return slots;
+};
+
+const refreshEditTimeSlots = async () => {
+  editTimeSlots.value = [];
+
+  if (!isEditing.value || !rawAppointment.value || !editedDate.value) {
+    return;
+  }
+
+  isLoadingEditTimeSlots.value = true;
+
+  try {
+    const config = useRuntimeConfig();
+    const clinicId = rawAppointment.value.clinic_id;
+    const selectedDate = getDatePart(editedDate.value);
+
+    const [availabilitiesResponse, appointmentsResponse] = await Promise.all([
+      fetch(`${config.public.apiUrl}/availabilities/clinic/${clinicId}`, {
+        method: "GET",
+        headers: getAuthHeaders(),
+      }),
+      fetch(`${config.public.apiUrl}/appointments/clinic/${clinicId}`, {
+        method: "GET",
+        headers: getAuthHeaders(),
+      }),
+    ]);
+
+    const availabilitiesResult =
+      (await availabilitiesResponse.json()) as ApiResponse<Availability[]>;
+    const appointmentsResult =
+      (await appointmentsResponse.json()) as ApiResponse<ApiAppointment[]>;
+
+    if (!availabilitiesResponse.ok || !availabilitiesResult.success) {
+      throw new Error(
+        availabilitiesResult.error ||
+          "Impossible de charger les disponibilités de la clinique",
+      );
+    }
+
+    if (!appointmentsResponse.ok || !appointmentsResult.success) {
+      throw new Error(
+        appointmentsResult.error || "Impossible de charger les rendez-vous",
+      );
+    }
+
+    const dayCandidates = getDayCandidates(selectedDate).map(normalizeDayName);
+    const availability = availabilitiesResult.data.find((item) => {
+      return dayCandidates.includes(normalizeDayName(item.day));
+    });
+
+    if (!availability) {
+      editTimeSlots.value = [];
+      editedTime.value = "";
+      return;
+    }
+
+    const slotRules = parseSlotRules(availability.slot_rules);
+    if (!slotRules) {
+      editTimeSlots.value = [];
+      editedTime.value = "";
+      return;
+    }
+
+    const bookedByTime = new Map<string, number>();
+
+    appointmentsResult.data
+      .filter((item) => {
+        return (
+          item.id !== rawAppointment.value?.id &&
+          item.clinic_id === clinicId &&
+          getDatePart(item.date) === selectedDate
+        );
+      })
+      .forEach((item) => {
+        const normalizedTime = normalizeTimeToHourMinute(item.time);
+        const count = bookedByTime.get(normalizedTime) ?? 0;
+        bookedByTime.set(normalizedTime, count + 1);
+      });
+
+    editTimeSlots.value = buildTimeSlots(availability, slotRules, bookedByTime);
+
+    const normalizedEditedTime = normalizeTimeToHourMinute(editedTime.value);
+    const exists = editTimeSlots.value.some(
+      (slot) => slot.time === normalizedEditedTime,
+    );
+
+    if (!exists) {
+      editedTime.value = "";
+    } else {
+      editedTime.value = normalizedEditedTime;
+    }
+  } catch (error) {
+    saveErrorMessage.value =
+      error instanceof Error
+        ? error.message
+        : "Impossible de calculer les créneaux disponibles";
+  } finally {
+    isLoadingEditTimeSlots.value = false;
+  }
 };
 
 const formatDateFr = (rawDate: string): string => {
@@ -265,12 +519,23 @@ const startEditing = () => {
   editedRemark.value = rawAppointment.value.remark || "";
   saveErrorMessage.value = "";
   isEditing.value = true;
+
+  void refreshEditTimeSlots();
 };
 
 const cancelEditing = () => {
   isEditing.value = false;
   saveErrorMessage.value = "";
+  editTimeSlots.value = [];
 };
+
+watch(editedDate, async () => {
+  if (!isEditing.value) {
+    return;
+  }
+
+  await refreshEditTimeSlots();
+});
 
 const saveAppointment = async () => {
   if (!rawAppointment.value) {
@@ -389,12 +654,29 @@ const saveAppointment = async () => {
           <div class="rounded-xl bg-white p-4">
             <p class="text-sm text-gray-500">Heure</p>
 
-            <input
-              v-if="isEditing"
-              v-model="editedTime"
-              type="time"
-              class="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 font-bold outline-none focus:border-green-600"
-            />
+            <div v-if="isEditing" class="mt-1">
+              <p v-if="isLoadingEditTimeSlots" class="text-sm text-gray-500">
+                Chargement des créneaux...
+              </p>
+
+              <div v-else class="flex flex-wrap gap-2">
+                <button
+                  v-for="slot in availableEditTimeSlots"
+                  :key="slot.time"
+                  type="button"
+                  :disabled="isSaving"
+                  class="cursor-pointer rounded-lg px-3 py-1 text-sm font-semibold transition-colors"
+                  :class="{
+                    'bg-green-700 text-white': editedTime === slot.time,
+                    'bg-green-300 text-black hover:bg-green-500':
+                      editedTime !== slot.time,
+                  }"
+                  @click="editedTime = slot.time"
+                >
+                  {{ slot.time }}
+                </button>
+              </div>
+            </div>
 
             <p v-else class="font-bold">{{ appointment.time }}</p>
           </div>

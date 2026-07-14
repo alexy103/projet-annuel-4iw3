@@ -302,7 +302,7 @@ const refreshTimeSlots = async () => {
     if (!availabilitiesResponse.ok || !availabilitiesResult.success) {
       throw new Error(
         availabilitiesResult.error ||
-          "Impossible de charger les disponibilites de la clinique",
+          "Impossible de charger les disponibilités de la clinique",
       );
     }
 
@@ -349,7 +349,7 @@ const refreshTimeSlots = async () => {
     appointmentErrorMessage.value =
       error instanceof Error
         ? error.message
-        : "Impossible de calculer les creneaux disponibles";
+        : "Impossible de calculer les créneaux disponibles";
   } finally {
     isLoadingTimeSlots.value = false;
   }
@@ -628,7 +628,7 @@ watch([selectedClinicLabel, appointmentDate], async () => {
             </p>
 
             <p v-if="isLoadingTimeSlots" class="text-xs text-gray-500">
-              Chargement des creneaux...
+              Chargement des créneaux...
             </p>
 
             <div v-else class="flex flex-wrap gap-2">

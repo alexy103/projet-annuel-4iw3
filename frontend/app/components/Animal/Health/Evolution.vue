@@ -202,7 +202,7 @@ const fetchEvolutionData = async () => {
     points.value = timeline.map((record) => record.height);
   } catch (error) {
     console.error(error);
-    fetchError.value = "Impossible de charger l'evolution.";
+    fetchError.value = "Impossible de charger l'évolution.";
     labels.value = [];
     points.value = [];
   } finally {
