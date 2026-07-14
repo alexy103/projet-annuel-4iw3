@@ -256,16 +256,22 @@ const upcomingAppointments = computed<UpcomingAppointmentCard[]>(() => {
   const reasonsById = new Map(
     appointmentReasons.value.map((reason) => [reason.id, reason.label]),
   );
-  const clinicsById = new Map(clinics.value.map((clinic) => [clinic.id, clinic.name]));
+  const clinicsById = new Map(
+    clinics.value.map((clinic) => [clinic.id, clinic.name]),
+  );
 
   return appointments.value
     .filter((appointment) => {
       return (
-        appointment.animal_id === parsedAnimalId.value && !appointment.is_completed
+        appointment.animal_id === parsedAnimalId.value &&
+        !appointment.is_completed
       );
     })
     .map((appointment) => {
-      const startsAt = buildAppointmentDateTime(appointment.date, appointment.time);
+      const startsAt = buildAppointmentDateTime(
+        appointment.date,
+        appointment.time,
+      );
 
       return {
         appointment,
@@ -274,7 +280,7 @@ const upcomingAppointments = computed<UpcomingAppointmentCard[]>(() => {
     })
     .filter(({ startsAt }) => startsAt.getTime() >= now.getTime())
     .sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime())
-    .slice(0, 4)
+    .slice(0, 10)
     .map(({ appointment, startsAt }) => ({
       id: appointment.id,
       animal: animal.value?.name ?? `Animal #${appointment.animal_id}`,
@@ -297,9 +303,10 @@ const getApiErrorMessage = (error: unknown, fallbackMessage: string) => {
     "data" in error &&
     typeof (error as { data?: unknown }).data === "object" &&
     (error as { data?: unknown }).data !== null &&
-    "error" in ((error as { data?: unknown }).data as Record<string, unknown>) &&
-    typeof ((error as { data?: unknown }).data as Record<string, unknown>).error ===
-      "string"
+    "error" in
+      ((error as { data?: unknown }).data as Record<string, unknown>) &&
+    typeof ((error as { data?: unknown }).data as Record<string, unknown>)
+      .error === "string"
   ) {
     return ((error as { data?: unknown }).data as { error: string }).error;
   }
@@ -638,7 +645,11 @@ watch(showInfo, (isOpen) => {
 onMounted(async () => {
   isLoading.value = true;
 
-  await Promise.all([fetchCurrentAnimal(), fetchSpecies(), fetchAppointmentsData()]);
+  await Promise.all([
+    fetchCurrentAnimal(),
+    fetchSpecies(),
+    fetchAppointmentsData(),
+  ]);
 
   isLoading.value = false;
 });
@@ -723,7 +734,10 @@ onMounted(async () => {
           {{ appointmentsErrorMessage }}
         </div>
 
-        <div v-else-if="upcomingAppointments.length === 0" class="py-2 text-sm text-gray-600">
+        <div
+          v-else-if="upcomingAppointments.length === 0"
+          class="py-2 text-sm text-gray-600"
+        >
           Aucun rendez-vous à venir pour cet animal.
         </div>
 
@@ -746,9 +760,7 @@ onMounted(async () => {
 
     <div class="flex flex-col gap-6 xl:flex-row xl:items-stretch xl:gap-16">
       <BaseSection title="Carnet de santé" color="blue">
-        <div
-          class="grid grid-cols-2 justify-items-center gap-4 md:w-fit"
-        >
+        <div class="grid grid-cols-2 justify-items-center gap-4 md:w-fit">
           <AnimalHealthGraph
             type="weight"
             :animal-id="animal.id"

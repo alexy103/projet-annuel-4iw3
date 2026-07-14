@@ -18,6 +18,37 @@ type AppointmentReason = {
   label: string;
 };
 
+type Availability = {
+  id: number;
+  clinic_id: number;
+  day: string;
+  opening: number;
+  closing: number;
+  slot_rules: unknown;
+};
+
+type ApiAppointment = {
+  id: number;
+  date: string;
+  time: string;
+  clinic_id: number;
+};
+
+type SlotRules = {
+  interval: number;
+  capacity?: number;
+  break?: {
+    start: number;
+    end: number;
+  };
+};
+
+type TimeSlot = {
+  time: string;
+  remaining: number;
+  isFull: boolean;
+};
+
 const userStore = useUserStore();
 const {
   isOpen: showNewApt,
@@ -31,9 +62,15 @@ const isSubmittingAppointment = ref(false);
 const isLoadingLookups = ref(false);
 const appointmentErrorMessage = ref("");
 const appointmentSuccessMessage = ref("");
+const isLoadingTimeSlots = ref(false);
 
 const clinics = ref<Clinic[]>([]);
 const reasons = ref<AppointmentReason[]>([]);
+const timeSlots = ref<TimeSlot[]>([]);
+
+const availableTimeSlots = computed(() => {
+  return timeSlots.value.filter((slot) => !slot.isFull);
+});
 
 const appointmentDate = ref("");
 const appointmentTime = ref("");
@@ -48,6 +85,12 @@ const animalOptions = computed(() => {
 
 const clinicOptions = computed(() => {
   return clinics.value.map((clinic) => `${clinic.name} - ${clinic.city}`);
+});
+
+const selectedClinic = computed(() => {
+  return clinics.value.find(
+    (clinic) => `${clinic.name} - ${clinic.city}` === selectedClinicLabel.value,
+  );
 });
 
 const reasonOptions = computed(() => {
@@ -89,6 +132,231 @@ const resetAppointmentForm = () => {
   selectedReasonLabel.value = null;
   appointmentRemark.value = "";
   appointmentErrorMessage.value = "";
+  timeSlots.value = [];
+};
+
+const getDatePart = (rawDate: string): string => {
+  return rawDate.includes("T") ? (rawDate.split("T")[0] ?? rawDate) : rawDate;
+};
+
+const parseSlotRules = (rawRules: unknown): SlotRules | null => {
+  if (typeof rawRules !== "object" || rawRules === null) {
+    return null;
+  }
+
+  const interval = Number((rawRules as { interval?: unknown }).interval);
+  const capacity = Number((rawRules as { capacity?: unknown }).capacity ?? 1);
+  const rawBreak = (rawRules as { break?: unknown }).break;
+
+  if (!Number.isInteger(interval) || interval <= 0) {
+    return null;
+  }
+
+  const parsedRules: SlotRules = {
+    interval,
+    capacity: Number.isInteger(capacity) && capacity > 0 ? capacity : 1,
+  };
+
+  if (typeof rawBreak === "object" && rawBreak !== null) {
+    const breakStart = Number((rawBreak as { start?: unknown }).start);
+    const breakEnd = Number((rawBreak as { end?: unknown }).end);
+
+    if (
+      Number.isFinite(breakStart) &&
+      Number.isFinite(breakEnd) &&
+      breakStart < breakEnd
+    ) {
+      parsedRules.break = {
+        start: breakStart,
+        end: breakEnd,
+      };
+    }
+  }
+
+  return parsedRules;
+};
+
+const formatMinutesAsTime = (minutesFromMidnight: number): string => {
+  const hours = Math.floor(minutesFromMidnight / 60)
+    .toString()
+    .padStart(2, "0");
+  const minutes = (minutesFromMidnight % 60).toString().padStart(2, "0");
+
+  return `${hours}:${minutes}`;
+};
+
+const normalizeTimeToHourMinute = (rawTime: string): string => {
+  const [hours = "00", minutes = "00"] = rawTime.split(":");
+  return `${hours.padStart(2, "0")}:${minutes.padStart(2, "0")}`;
+};
+
+const normalizeDayName = (day: string): string => {
+  return day
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLowerCase()
+    .trim();
+};
+
+const getDayCandidates = (date: string): string[] => {
+  const [year = 1970, month = 1, day = 1] = getDatePart(date)
+    .split("-")
+    .map(Number);
+  const dayIndex = new Date(year, month - 1, day).getDay();
+
+  const englishDayNames = [
+    "sunday",
+    "monday",
+    "tuesday",
+    "wednesday",
+    "thursday",
+    "friday",
+    "saturday",
+  ];
+  const frenchDayNames = [
+    "dimanche",
+    "lundi",
+    "mardi",
+    "mercredi",
+    "jeudi",
+    "vendredi",
+    "samedi",
+  ];
+
+  return [englishDayNames[dayIndex] ?? "", frenchDayNames[dayIndex] ?? ""];
+};
+
+const buildTimeSlots = (
+  availability: Availability,
+  rules: SlotRules,
+  bookedByTime: Map<string, number>,
+): TimeSlot[] => {
+  const openMinutes = availability.opening * 60;
+  const closeMinutes = availability.closing * 60;
+  const breakStart = rules.break ? rules.break.start * 60 : null;
+  const breakEnd = rules.break ? rules.break.end * 60 : null;
+  const capacity = rules.capacity ?? 1;
+  const slots: TimeSlot[] = [];
+
+  for (
+    let slotStart = openMinutes;
+    slotStart + rules.interval <= closeMinutes;
+    slotStart += rules.interval
+  ) {
+    if (breakStart !== null && breakEnd !== null) {
+      const isInBreak = slotStart >= breakStart && slotStart < breakEnd;
+      if (isInBreak) {
+        continue;
+      }
+    }
+
+    const slotTime = formatMinutesAsTime(slotStart);
+    const booked = bookedByTime.get(slotTime) ?? 0;
+    const remaining = Math.max(0, capacity - booked);
+
+    slots.push({
+      time: slotTime,
+      remaining,
+      isFull: remaining <= 0,
+    });
+  }
+
+  return slots;
+};
+
+const refreshTimeSlots = async () => {
+  appointmentTime.value = "";
+  timeSlots.value = [];
+
+  if (
+    !showNewApt.value ||
+    !selectedClinic.value?.id ||
+    !appointmentDate.value
+  ) {
+    return;
+  }
+
+  isLoadingTimeSlots.value = true;
+
+  try {
+    const config = useRuntimeConfig();
+    const clinicId = selectedClinic.value.id;
+    const selectedDate = getDatePart(appointmentDate.value);
+
+    const [availabilitiesResponse, appointmentsResponse] = await Promise.all([
+      fetch(`${config.public.apiUrl}/availabilities/clinic/${clinicId}`, {
+        method: "GET",
+        headers: getAuthHeaders(),
+      }),
+      fetch(`${config.public.apiUrl}/appointments/clinic/${clinicId}`, {
+        method: "GET",
+        headers: getAuthHeaders(),
+      }),
+    ]);
+
+    const availabilitiesResult =
+      (await availabilitiesResponse.json()) as ApiResponse<Availability[]>;
+    const appointmentsResult =
+      (await appointmentsResponse.json()) as ApiResponse<ApiAppointment[]>;
+
+    if (!availabilitiesResponse.ok || !availabilitiesResult.success) {
+      throw new Error(
+        availabilitiesResult.error ||
+          "Impossible de charger les disponibilites de la clinique",
+      );
+    }
+
+    if (!appointmentsResponse.ok || !appointmentsResult.success) {
+      throw new Error(
+        appointmentsResult.error || "Impossible de charger les rendez-vous",
+      );
+    }
+
+    const dayCandidates = getDayCandidates(selectedDate).map(normalizeDayName);
+    const availability = availabilitiesResult.data.find((item) => {
+      return dayCandidates.includes(normalizeDayName(item.day));
+    });
+
+    if (!availability) {
+      timeSlots.value = [];
+      return;
+    }
+
+    const slotRules = parseSlotRules(availability.slot_rules);
+
+    if (!slotRules) {
+      timeSlots.value = [];
+      return;
+    }
+
+    const bookedByTime = new Map<string, number>();
+
+    appointmentsResult.data
+      .filter((appointment) => {
+        return (
+          appointment.clinic_id === clinicId &&
+          getDatePart(appointment.date) === selectedDate
+        );
+      })
+      .forEach((appointment) => {
+        const normalizedTime = normalizeTimeToHourMinute(appointment.time);
+        const count = bookedByTime.get(normalizedTime) ?? 0;
+        bookedByTime.set(normalizedTime, count + 1);
+      });
+
+    timeSlots.value = buildTimeSlots(availability, slotRules, bookedByTime);
+  } catch (error) {
+    appointmentErrorMessage.value =
+      error instanceof Error
+        ? error.message
+        : "Impossible de calculer les creneaux disponibles";
+  } finally {
+    isLoadingTimeSlots.value = false;
+  }
+};
+
+const selectTimeSlot = (slotTime: string) => {
+  appointmentTime.value = slotTime;
 };
 
 const fetchClinics = async () => {
@@ -238,11 +506,21 @@ watch(showNewApt, async (isOpen) => {
     if (userStore.animals.length === 0) {
       await userStore.fetchAnimals();
     }
+
+    await refreshTimeSlots();
     return;
   }
 
   resetAppointmentForm();
   clearPrefilledDate();
+});
+
+watch([selectedClinicLabel, appointmentDate], async () => {
+  if (!showNewApt.value) {
+    return;
+  }
+
+  await refreshTimeSlots();
 });
 </script>
 
@@ -305,13 +583,8 @@ watch(showNewApt, async (isOpen) => {
     </div>
 
     <BasePopup v-model="showNewApt" fit>
-      <div class="w-full max-w-sm">
+      <div class="mx-auto w-[86vw] max-w-[20rem] sm:max-w-sm md:max-w-xl">
         <h2 class="mb-4 text-center font-bold">Prendre un rendez-vous</h2>
-
-        <div class="mb-4 flex gap-4">
-          <BaseInput v-model="appointmentDate" label="Date" type="date" />
-          <BaseInput v-model="appointmentTime" label="Heure" type="time" />
-        </div>
 
         <BaseSelect
           class="mb-4"
@@ -319,6 +592,16 @@ watch(showNewApt, async (isOpen) => {
           label="Animal"
           v-model="selectedAnimalName"
           :options="animalOptions"
+          :disabled="isLoadingLookups || isSubmittingAppointment"
+          addClass="w-full"
+        />
+
+        <BaseSelect
+          class="mb-4"
+          id="reason"
+          label="Motif"
+          v-model="selectedReasonLabel"
+          :options="reasonOptions"
           :disabled="isLoadingLookups || isSubmittingAppointment"
           addClass="w-full"
         />
@@ -333,15 +616,40 @@ watch(showNewApt, async (isOpen) => {
           addClass="w-full"
         />
 
-        <BaseSelect
-          class="mb-4"
-          id="reason"
-          label="Motif"
-          v-model="selectedReasonLabel"
-          :options="reasonOptions"
-          :disabled="isLoadingLookups || isSubmittingAppointment"
-          addClass="w-full"
-        />
+        <div class="mb-4">
+          <BaseInput v-model="appointmentDate" label="Date" type="date" />
+
+          <div class="mt-3">
+            <p
+              v-if="isLoadingTimeSlots || availableTimeSlots.length > 0"
+              class="mb-2 text-sm"
+            >
+              Heure
+            </p>
+
+            <p v-if="isLoadingTimeSlots" class="text-xs text-gray-500">
+              Chargement des creneaux...
+            </p>
+
+            <div v-else class="flex flex-wrap gap-2">
+              <button
+                v-for="slot in availableTimeSlots"
+                :key="slot.time"
+                type="button"
+                :disabled="isSubmittingAppointment"
+                class="cursor-pointer rounded-lg px-3 py-1 text-sm font-semibold transition-colors"
+                :class="{
+                  'bg-green-700 text-white': appointmentTime === slot.time,
+                  'bg-green-300 text-black hover:bg-green-500':
+                    appointmentTime !== slot.time,
+                }"
+                @click="selectTimeSlot(slot.time)"
+              >
+                {{ slot.time }}
+              </button>
+            </div>
+          </div>
+        </div>
 
         <label class="mb-1 block text-center text-sm"
           >Remarque (optionnel)</label

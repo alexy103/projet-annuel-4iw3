@@ -123,7 +123,7 @@ const upcomingAppointments = computed<UpcomingAppointmentCard[]>(() => {
     })
     .filter(({ startsAt }) => startsAt.getTime() >= now.getTime())
     .sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime())
-    .slice(0, 4)
+    .slice(0, 10)
     .map(({ appointment, startsAt }) => ({
       id: appointment.id,
       animal:
