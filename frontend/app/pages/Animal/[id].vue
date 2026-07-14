@@ -48,6 +48,42 @@ type ApiAppointmentReason = {
   label: string;
 };
 
+type ApiTreatment = {
+  id: number;
+  date: string;
+  note?: string | null;
+  quantity?: number | null;
+  treatment_type_id: number;
+  medicine_id?: number | null;
+  animal_id: number;
+};
+
+type ApiTreatmentType = {
+  id: number;
+  user_id: number;
+  name: string;
+};
+
+type ApiReminderFrequency = {
+  id: number;
+  frequency: string;
+};
+
+type ApiTreatmentReminder = {
+  treatment_id: number;
+  reminder_frequency_id: number;
+  amount: number;
+};
+
+type TreatmentCard = {
+  id: number;
+  typeName: string;
+  date: string;
+  note: string;
+  quantityText: string;
+  frequencyText: string;
+};
+
 type UpcomingAppointmentCard = {
   id: number;
   animal: string;
@@ -66,6 +102,7 @@ const showInfo = ref(false);
 const showQr = ref(false);
 const showEdit = ref(false);
 const showNewMeasurement = ref(false);
+const showNewTreatment = ref(false);
 
 const animal = ref<Animal | null>(null);
 const species = ref<Species[]>([]);
@@ -100,6 +137,22 @@ const appointments = ref<ApiAppointment[]>([]);
 const clinics = ref<ApiClinic[]>([]);
 const appointmentReasons = ref<ApiAppointmentReason[]>([]);
 const evolutionType = ref<"weight" | "size">("weight");
+const treatments = ref<ApiTreatment[]>([]);
+const treatmentTypes = ref<ApiTreatmentType[]>([]);
+const reminderFrequencies = ref<ApiReminderFrequency[]>([]);
+const treatmentRemindersByTreatmentId = ref<
+  Record<number, ApiTreatmentReminder[]>
+>({});
+const isLoadingTreatments = ref(false);
+const treatmentsErrorMessage = ref("");
+const newTreatmentError = ref("");
+
+const newTreatmentDate = ref(getTodayDateInputValue());
+const newTreatmentTypeId = ref<number | null>(null);
+const newTreatmentFrequencyId = ref<number | null>(null);
+const newTreatmentFrequencyAmount = ref<number>(1);
+const newTreatmentQuantity = ref<number | null>(null);
+const newTreatmentNote = ref("");
 
 const animalId = computed(() => {
   const param = route.params.animalId || route.params.id;
@@ -247,6 +300,28 @@ const formatTimeFr = (rawTime: string): string => {
   return `${hours}h${minutes}`;
 };
 
+const formatReminderFrequencyText = (
+  amount: number,
+  frequencyLabel: string,
+): string => {
+  switch (frequencyLabel) {
+    case "Jour(s)":
+      return amount === 1 ? "Tous les jours" : `Tous les ${amount} jours`;
+    case "Semaine(s)":
+      return amount === 1
+        ? "Toutes les semaines"
+        : `Toutes les ${amount} semaines`;
+    case "Mois":
+      return amount === 1 ? "Tous les mois" : `Tous les ${amount} mois`;
+    case "An(s)":
+      return amount === 1 ? "Tous les ans" : `Tous les ${amount} ans`;
+    default:
+      return amount === 1
+        ? `Tous les ${frequencyLabel}`
+        : `Tous les ${amount} ${frequencyLabel}`;
+  }
+};
+
 const upcomingAppointments = computed<UpcomingAppointmentCard[]>(() => {
   if (!parsedAnimalId.value) {
     return [];
@@ -294,6 +369,71 @@ const upcomingAppointments = computed<UpcomingAppointmentCard[]>(() => {
         `Clinique #${appointment.clinic_id}`,
       isToday: isSameDay(startsAt, now),
     }));
+});
+
+const treatmentTypeOptions = computed(() => {
+  return treatmentTypes.value.map((type) => ({
+    value: String(type.id),
+    label: type.name,
+  }));
+});
+
+const reminderFrequencyOptions = computed(() => {
+  return reminderFrequencies.value.map((frequency) => ({
+    value: String(frequency.id),
+    label: frequency.frequency,
+  }));
+});
+
+const treatmentCards = computed<TreatmentCard[]>(() => {
+  const treatmentTypesById = new Map(
+    treatmentTypes.value.map((type) => [type.id, type.name]),
+  );
+  const frequenciesById = new Map(
+    reminderFrequencies.value.map((frequency) => [
+      frequency.id,
+      frequency.frequency,
+    ]),
+  );
+
+  return treatments.value
+    .map((treatment) => {
+      const reminders =
+        treatmentRemindersByTreatmentId.value[treatment.id] ?? [];
+      const frequencyText =
+        reminders.length > 0
+          ? reminders
+              .map((reminder) => {
+                const frequencyLabel =
+                  frequenciesById.get(reminder.reminder_frequency_id) ??
+                  `Frequence #${reminder.reminder_frequency_id}`;
+                return formatReminderFrequencyText(
+                  reminder.amount,
+                  frequencyLabel,
+                );
+              })
+              .join(" • ")
+          : "";
+
+      return {
+        id: treatment.id,
+        typeName:
+          treatmentTypesById.get(treatment.treatment_type_id) ??
+          `Type #${treatment.treatment_type_id}`,
+        date: formatDateFr(treatment.date),
+        note: treatment.note?.trim() || "",
+        quantityText:
+          treatment.quantity && treatment.quantity > 0
+            ? `${treatment.quantity}`
+            : "",
+        frequencyText,
+      };
+    })
+    .sort((a, b) => {
+      const dateA = a.date.split("/").reverse().join("-");
+      const dateB = b.date.split("/").reverse().join("-");
+      return dateB.localeCompare(dateA);
+    });
 });
 
 const getApiErrorMessage = (error: unknown, fallbackMessage: string) => {
@@ -428,6 +568,225 @@ const fetchAppointmentsData = async () => {
   }
 };
 
+const fetchTreatmentsData = async () => {
+  if (!parsedAnimalId.value) {
+    treatments.value = [];
+    treatmentTypes.value = [];
+    reminderFrequencies.value = [];
+    treatmentRemindersByTreatmentId.value = {};
+    return;
+  }
+
+  treatmentsErrorMessage.value = "";
+  isLoadingTreatments.value = true;
+
+  try {
+    const [treatmentsResponse, treatmentTypesResponse, frequenciesResponse] =
+      await Promise.all([
+        fetch(
+          `${config.public.apiUrl}/treatments/animal/${parsedAnimalId.value}`,
+          {
+            method: "GET",
+            headers: {
+              ...authHeaders.value,
+              "Content-Type": "application/json",
+            },
+          },
+        ),
+        fetch(`${config.public.apiUrl}/treatment-types`, {
+          method: "GET",
+          headers: {
+            ...authHeaders.value,
+            "Content-Type": "application/json",
+          },
+        }),
+        fetch(`${config.public.apiUrl}/reminder-frequencies`, {
+          method: "GET",
+          headers: {
+            ...authHeaders.value,
+            "Content-Type": "application/json",
+          },
+        }),
+      ]);
+
+    const treatmentsResult = (await treatmentsResponse.json()) as ApiResponse<
+      ApiTreatment[]
+    >;
+    const treatmentTypesResult =
+      (await treatmentTypesResponse.json()) as ApiResponse<ApiTreatmentType[]>;
+    const frequenciesResult = (await frequenciesResponse.json()) as ApiResponse<
+      ApiReminderFrequency[]
+    >;
+
+    if (!treatmentsResponse.ok || !treatmentsResult.success) {
+      throw new Error(
+        treatmentsResult.message || "Impossible de charger les traitements.",
+      );
+    }
+
+    if (!treatmentTypesResponse.ok || !treatmentTypesResult.success) {
+      throw new Error(
+        treatmentTypesResult.message ||
+          "Impossible de charger les types de traitement.",
+      );
+    }
+
+    if (!frequenciesResponse.ok || !frequenciesResult.success) {
+      throw new Error(
+        frequenciesResult.message ||
+          "Impossible de charger les frequences de rappel.",
+      );
+    }
+
+    treatments.value = treatmentsResult.data;
+    treatmentTypes.value = treatmentTypesResult.data;
+    reminderFrequencies.value = frequenciesResult.data;
+
+    const remindersEntries = await Promise.all(
+      treatmentsResult.data.map(async (treatment) => {
+        const response = await fetch(
+          `${config.public.apiUrl}/treatment-reminders/treatment/${treatment.id}`,
+          {
+            method: "GET",
+            headers: {
+              ...authHeaders.value,
+              "Content-Type": "application/json",
+            },
+          },
+        );
+
+        const result = (await response.json()) as ApiResponse<
+          ApiTreatmentReminder[]
+        >;
+
+        if (!response.ok || !result.success) {
+          throw new Error(
+            result.message ||
+              `Impossible de charger les rappels du traitement #${treatment.id}.`,
+          );
+        }
+
+        return [treatment.id, result.data] as const;
+      }),
+    );
+
+    treatmentRemindersByTreatmentId.value =
+      Object.fromEntries(remindersEntries);
+  } catch (error) {
+    treatmentsErrorMessage.value = getApiErrorMessage(
+      error,
+      "Impossible de charger les traitements.",
+    );
+  } finally {
+    isLoadingTreatments.value = false;
+  }
+};
+
+const submitNewTreatment = async () => {
+  if (!parsedAnimalId.value) {
+    newTreatmentError.value = "Animal introuvable.";
+    return;
+  }
+
+  if (!newTreatmentDate.value || !newTreatmentTypeId.value) {
+    newTreatmentError.value =
+      "La date et le type de traitement sont obligatoires.";
+    return;
+  }
+
+  if (
+    newTreatmentQuantity.value !== null &&
+    (!Number.isInteger(newTreatmentQuantity.value) ||
+      newTreatmentQuantity.value <= 0)
+  ) {
+    newTreatmentError.value =
+      "La quantité doit être un entier strictement positif.";
+    return;
+  }
+
+  if (
+    newTreatmentFrequencyId.value !== null &&
+    (!Number.isInteger(newTreatmentFrequencyAmount.value) ||
+      newTreatmentFrequencyAmount.value < 1 ||
+      newTreatmentFrequencyAmount.value > 20)
+  ) {
+    newTreatmentError.value =
+      "Le nombre pour la frequence doit etre un entier entre 1 et 20.";
+    return;
+  }
+
+  try {
+    isSubmitting.value = true;
+    newTreatmentError.value = "";
+
+    const body: {
+      date: string;
+      treatment_type_id: number;
+      animal_id: number;
+      quantity?: number;
+      note?: string;
+    } = {
+      date: newTreatmentDate.value,
+      treatment_type_id: newTreatmentTypeId.value,
+      animal_id: parsedAnimalId.value,
+    };
+
+    if (newTreatmentQuantity.value !== null) {
+      body.quantity = newTreatmentQuantity.value;
+    }
+
+    const trimmedNote = newTreatmentNote.value.trim();
+    if (trimmedNote.length > 0) {
+      body.note = trimmedNote;
+    }
+
+    const createdTreatmentResponse = await $fetch<ApiResponse<ApiTreatment>>(
+      `${config.public.apiUrl}/treatments`,
+      {
+        method: "POST",
+        headers: {
+          ...authHeaders.value,
+          "Content-Type": "application/json",
+        },
+        body,
+      },
+    );
+
+    if (newTreatmentFrequencyId.value !== null) {
+      await $fetch(`${config.public.apiUrl}/treatment-reminders`, {
+        method: "POST",
+        headers: {
+          ...authHeaders.value,
+          "Content-Type": "application/json",
+        },
+        body: {
+          treatment_id: createdTreatmentResponse.data.id,
+          reminder_frequency_id: newTreatmentFrequencyId.value,
+          amount: newTreatmentFrequencyAmount.value,
+        },
+      });
+    }
+
+    await fetchTreatmentsData();
+
+    showNewTreatment.value = false;
+    newTreatmentDate.value = getTodayDateInputValue();
+    newTreatmentTypeId.value = null;
+    newTreatmentFrequencyId.value = null;
+    newTreatmentFrequencyAmount.value = 1;
+    newTreatmentQuantity.value = null;
+    newTreatmentNote.value = "";
+  } catch (error) {
+    console.error(error);
+    newTreatmentError.value = getApiErrorMessage(
+      error,
+      "Impossible d'enregistrer le traitement.",
+    );
+  } finally {
+    isSubmitting.value = false;
+  }
+};
+
 const submitEdit = async () => {
   if (!animal.value || !animalId.value) {
     return;
@@ -540,12 +899,11 @@ const submitNewMeasurement = async () => {
     return;
   }
 
-  const hasWeight =
-    newMeasurementWeight.value !== null &&
-    Number.isFinite(newMeasurementWeight.value);
-  const hasSize =
-    newMeasurementSize.value !== null &&
-    Number.isFinite(newMeasurementSize.value);
+  const weightValue = newMeasurementWeight.value;
+  const sizeValue = newMeasurementSize.value;
+
+  const hasWeight = weightValue !== null && Number.isFinite(weightValue);
+  const hasSize = sizeValue !== null && Number.isFinite(sizeValue);
 
   if (!hasWeight && !hasSize) {
     newMeasurementError.value =
@@ -553,21 +911,13 @@ const submitNewMeasurement = async () => {
     return;
   }
 
-  if (
-    hasWeight &&
-    (!Number.isInteger(newMeasurementWeight.value) ||
-      newMeasurementWeight.value <= 0)
-  ) {
+  if (hasWeight && (!Number.isInteger(weightValue) || weightValue <= 0)) {
     newMeasurementError.value =
       "Le poids doit être un entier strictement positif.";
     return;
   }
 
-  if (
-    hasSize &&
-    (!Number.isInteger(newMeasurementSize.value) ||
-      newMeasurementSize.value <= 0)
-  ) {
+  if (hasSize && (!Number.isInteger(sizeValue) || sizeValue <= 0)) {
     newMeasurementError.value =
       "La taille doit être un entier strictement positif.";
     return;
@@ -584,28 +934,28 @@ const submitNewMeasurement = async () => {
 
     const requests: Promise<unknown>[] = [];
 
-    if (hasWeight) {
+    if (hasWeight && weightValue !== null) {
       requests.push(
         $fetch(`${config.public.apiUrl}/weight-records`, {
           method: "POST",
           headers,
           body: {
             date: newMeasurementDate.value,
-            weight: newMeasurementWeight.value,
+            weight: weightValue,
             animal_id: parsedAnimalId,
           },
         }),
       );
     }
 
-    if (hasSize) {
+    if (hasSize && sizeValue !== null) {
       requests.push(
         $fetch(`${config.public.apiUrl}/height-records`, {
           method: "POST",
           headers,
           body: {
             date: newMeasurementDate.value,
-            height: newMeasurementSize.value,
+            height: sizeValue,
             animal_id: parsedAnimalId,
           },
         }),
@@ -649,9 +999,21 @@ onMounted(async () => {
     fetchCurrentAnimal(),
     fetchSpecies(),
     fetchAppointmentsData(),
+    fetchTreatmentsData(),
   ]);
 
   isLoading.value = false;
+});
+
+watch(showNewTreatment, (isOpen) => {
+  if (!isOpen) {
+    return;
+  }
+
+  newTreatmentDate.value = getTodayDateInputValue();
+  newTreatmentFrequencyId.value = null;
+  newTreatmentFrequencyAmount.value = 1;
+  newTreatmentError.value = "";
 });
 </script>
 
@@ -809,6 +1171,55 @@ onMounted(async () => {
         </div>
       </BaseSection>
     </div>
+
+    <BaseSection
+      title="Traitements"
+      action="Nouveau traitement"
+      plus
+      @action-click="showNewTreatment = true"
+    >
+      <div class="space-y-2">
+        <p v-if="isLoadingTreatments" class="text-sm text-gray-600">
+          Chargement des traitements...
+        </p>
+
+        <p v-else-if="treatmentsErrorMessage" class="text-sm text-red-600">
+          {{ treatmentsErrorMessage }}
+        </p>
+
+        <p
+          v-else-if="treatmentCards.length === 0"
+          class="text-sm text-gray-600"
+        >
+          Aucun traitement enregistré pour cet animal.
+        </p>
+
+        <div v-else class="space-y-2">
+          <article
+            v-for="treatment in treatmentCards"
+            :key="treatment.id"
+            class="rounded-xl bg-green-300 p-3 shadow"
+          >
+            <div class="flex items-center justify-between gap-3">
+              <p class="font-bold">{{ treatment.typeName }}</p>
+              <p class="text-sm font-semibold">{{ treatment.date }}</p>
+            </div>
+
+            <div class="mt-1 space-y-1 text-sm">
+              <p v-if="treatment.quantityText" class="text-gray-700">
+                Quantité: {{ treatment.quantityText }}
+              </p>
+              <p v-if="treatment.frequencyText" class="text-gray-700">
+                Fréquence: {{ treatment.frequencyText }}
+              </p>
+              <p v-if="treatment.note" class="text-gray-600 italic">
+                {{ treatment.note }}
+              </p>
+            </div>
+          </article>
+        </div>
+      </div>
+    </BaseSection>
   </div>
 
   <BasePopup v-model="showInfo">
@@ -989,6 +1400,118 @@ onMounted(async () => {
         :disabled="isSubmitting"
       >
         {{ isSubmitting ? "Enregistrement..." : "Enregistrer la mesure" }}
+      </button>
+    </form>
+  </BasePopup>
+
+  <BasePopup v-model="showNewTreatment">
+    <form class="flex flex-col gap-4" @submit.prevent="submitNewTreatment">
+      <h2 class="text-center font-bold">Nouveau traitement</h2>
+
+      <p v-if="newTreatmentError" class="text-center text-sm text-red-600">
+        {{ newTreatmentError }}
+      </p>
+
+      <div class="flex flex-col gap-1">
+        <label for="treatment-date" class="text-sm font-medium">Date</label>
+        <input
+          id="treatment-date"
+          v-model="newTreatmentDate"
+          type="date"
+          required
+          class="border-grey-300 rounded-lg border bg-white px-3 py-2 focus:border-green-700 focus:outline-none"
+        />
+      </div>
+
+      <div class="flex flex-col gap-1">
+        <label for="treatment-type" class="text-sm font-medium"
+          >Type de traitement</label
+        >
+        <select
+          id="treatment-type"
+          v-model="newTreatmentTypeId"
+          required
+          class="border-grey-300 rounded-lg border bg-white px-3 py-2 focus:border-green-700 focus:outline-none"
+        >
+          <option :value="null" disabled>Choisir un type</option>
+          <option
+            v-for="option in treatmentTypeOptions"
+            :key="option.value"
+            :value="Number(option.value)"
+          >
+            {{ option.label }}
+          </option>
+        </select>
+      </div>
+
+      <div class="flex flex-col gap-1">
+        <label for="treatment-frequency" class="text-sm font-medium"
+          >Frequence (optionnel)</label
+        >
+        <select
+          id="treatment-frequency"
+          v-model="newTreatmentFrequencyId"
+          class="border-grey-300 rounded-lg border bg-white px-3 py-2 focus:border-green-700 focus:outline-none"
+        >
+          <option :value="null">Aucune frequence</option>
+          <option
+            v-for="option in reminderFrequencyOptions"
+            :key="option.value"
+            :value="Number(option.value)"
+          >
+            {{ option.label }}
+          </option>
+        </select>
+      </div>
+
+      <div v-if="newTreatmentFrequencyId !== null" class="flex flex-col gap-1">
+        <label for="treatment-frequency-amount" class="text-sm font-medium">
+          Tous les (1 a 20)
+        </label>
+        <input
+          id="treatment-frequency-amount"
+          v-model.number="newTreatmentFrequencyAmount"
+          type="number"
+          min="1"
+          max="20"
+          step="1"
+          required
+          class="border-grey-300 rounded-lg border bg-white px-3 py-2 focus:border-green-700 focus:outline-none"
+        />
+      </div>
+
+      <div class="flex flex-col gap-1">
+        <label for="treatment-quantity" class="text-sm font-medium"
+          >Quantité (optionnel)</label
+        >
+        <input
+          id="treatment-quantity"
+          v-model.number="newTreatmentQuantity"
+          type="number"
+          min="1"
+          step="1"
+          class="border-grey-300 rounded-lg border bg-white px-3 py-2 focus:border-green-700 focus:outline-none"
+        />
+      </div>
+
+      <div class="flex flex-col gap-1">
+        <label for="treatment-note" class="text-sm font-medium"
+          >Note (optionnel)</label
+        >
+        <textarea
+          id="treatment-note"
+          v-model="newTreatmentNote"
+          rows="3"
+          class="border-grey-300 rounded-lg border bg-white px-3 py-2 focus:border-green-700 focus:outline-none"
+        />
+      </div>
+
+      <button
+        type="submit"
+        class="cursor-pointer rounded-lg bg-green-700 px-4 py-2 font-medium text-white transition-colors hover:bg-green-900 disabled:cursor-not-allowed disabled:opacity-50"
+        :disabled="isSubmitting"
+      >
+        {{ isSubmitting ? "Enregistrement..." : "Enregistrer le traitement" }}
       </button>
     </form>
   </BasePopup>
