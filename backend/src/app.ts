@@ -2,6 +2,8 @@ import "./docs/openapi";
 
 import express, { Express } from "express";
 import path from "path";
+import cors from "cors";
+import helmet from "helmet";
 import {
   authRouter,
   permissionsRouter,
@@ -31,6 +33,23 @@ import { openApiDocument } from "./docs";
 
 export const app: Express = express();
 
+const corsOrigins: string[] = (process.env.CORS_ORIGIN ?? "http://localhost:3000")
+  .split(",")
+  .map((origin) => origin.trim());
+
+app.use(
+  helmet({
+    // Static assets (profile/animal pictures) are loaded cross-origin by the frontend.
+    crossOriginResourcePolicy: false,
+  }),
+);
+app.use(
+  cors({
+    origin: corsOrigins,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
+    allowedHeaders: ["Content-Type", "Authorization", "x-api-key"],
+  }),
+);
 app.use(express.json());
 app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 

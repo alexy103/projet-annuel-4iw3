@@ -3,6 +3,7 @@ const props = defineProps<{
   label?: string;
   placeholder?: string;
   type?: string;
+  value?: string;
   modelValue?: string | number | null;
   small?: boolean;
   disabled?: boolean;
@@ -13,8 +14,8 @@ const emit = defineEmits<{
 }>();
 
 const inputValue = computed({
-  get: () => props.modelValue ?? "",
-  set: (value: string | number) => emit("update:modelValue", String(value)),
+  get: () => props.modelValue ?? props.value ?? "",
+  set: (value: string) => emit("update:modelValue", value),
 });
 </script>
 

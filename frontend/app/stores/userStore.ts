@@ -12,23 +12,26 @@ type ApiAnimal = {
   image?: string | null;
 };
 
-type ApiUser = {
+interface MeResponse {
   id: number;
-  first_name?: string | null;
-  last_name?: string | null;
+  first_name: string;
+  last_name: string;
+  email: string;
   profile_picture?: string | null;
-  avatar?: string | null;
-  onboarding_completed?: boolean;
-};
+  onboarding_completed: boolean;
+}
 
 export const useUserStore = defineStore("user", () => {
-  const userId = ref<number | null>(null);
-  const firstName = ref("");
-  const lastName = ref("");
+  const isReady = ref(false);
+  const id = ref<number | null>(null);
+  const firstName = ref("John");
+  const lastName = ref("Doe");
+  const email = ref("");
   const avatar = ref<string | null>(null);
   const onboardingCompleted = ref(false);
   const notificationsPush = ref(true);
   const nightMode = ref(false);
+  const twoFactorEnabled = ref(false);
   const animals = ref<Animal[]>([]);
 
   const isLoading = ref(false);
@@ -38,233 +41,134 @@ export const useUserStore = defineStore("user", () => {
     return `${firstName.value} ${lastName.value}`;
   });
 
-  const getAuthHeaders = () => {
+  const avatarUrl = computed(() => {
+    if (!avatar.value) return null;
+    if (avatar.value.startsWith("http")) return avatar.value;
     const config = useRuntimeConfig();
-    const accessToken = localStorage.getItem("accessToken");
+    const base = config.public.apiBase.replace(/\/api$/, "");
+    return `${base}${avatar.value}`;
+  });
 
-    return {
-      "x-api-key": config.public.apiKey,
-      Authorization: `Bearer ${accessToken}`,
-      "Content-Type": "application/json",
-    };
-  };
+  const updateProfile = async (data: { firstName?: string; lastName?: string; profilePictureFile?: File }) => {
+    const { apiFetch } = useApi();
+    const me = await apiFetch<MeResponse>("/users/me", {
+      method: "PATCH",
+      body: {
+        first_name: data.firstName ?? firstName.value,
+        last_name: data.lastName ?? lastName.value,
+      },
+    });
+    firstName.value = me.first_name;
+    lastName.value = me.last_name;
 
-  const getImageUrl = (path?: string | null) => {
-    if (!path) {
-      return null;
-    }
-
-    if (path.startsWith("http")) {
-      return path;
-    }
-
-    const config = useRuntimeConfig();
-
-    return `${config.public.backendUrl}${path}`;
-  };
-
-  const loadUserFromStorage = () => {
-    const storedUserId = localStorage.getItem("userId");
-    const storedFirstName = localStorage.getItem("firstName");
-    const storedLastName = localStorage.getItem("lastName");
-    const storedOnboardingCompleted = localStorage.getItem(
-      "onboardingCompleted",
-    );
-
-    if (storedUserId) {
-      userId.value = Number(storedUserId);
-    }
-
-    if (storedFirstName) {
-      firstName.value = storedFirstName;
-    }
-
-    if (storedLastName) {
-      lastName.value = storedLastName;
-    }
-
-    onboardingCompleted.value = storedOnboardingCompleted === "true";
-  };
-
-  const fetchCurrentUser = async () => {
-    errorMessage.value = "";
-    loadUserFromStorage();
-
-    isLoading.value = true;
-
-    try {
-      const config = useRuntimeConfig();
-
-      const response = await fetch(`${config.public.apiUrl}/users/me`, {
-        method: "GET",
-        headers: getAuthHeaders(),
+    if (data.profilePictureFile) {
+      const formData = new FormData();
+      formData.append("profile_picture", data.profilePictureFile);
+      const updated = await apiFetch<MeResponse>(`/users/${me.id}/profile-picture`, {
+        method: "PATCH",
+        body: formData,
       });
-
-      const result = await response.json();
-
-      if (!response.ok || !result.success) {
-        throw new Error(
-          result.error || "Erreur lors du chargement de l'utilisateur",
-        );
-      }
-
-      const user = result.data as ApiUser;
-
-      userId.value = user.id;
-      firstName.value = user.first_name || "";
-      lastName.value = user.last_name || "";
-      avatar.value = getImageUrl(user.profile_picture || user.avatar || null);
-      onboardingCompleted.value = user.onboarding_completed === true;
-
-      localStorage.setItem("userId", String(user.id));
-      localStorage.setItem("firstName", firstName.value);
-      localStorage.setItem("lastName", lastName.value);
-      localStorage.setItem(
-        "onboardingCompleted",
-        String(onboardingCompleted.value),
-      );
-    } catch (error) {
-      errorMessage.value =
-        error instanceof Error
-          ? error.message
-          : "Erreur lors du chargement de l'utilisateur";
-    } finally {
-      isLoading.value = false;
+      avatar.value = updated.profile_picture ?? null;
     }
+  };
+
+  const completeOnboarding = async (data?: { firstName?: string; lastName?: string; profilePictureFile?: File }) => {
+    const { apiFetch } = useApi();
+    const me = await apiFetch<MeResponse>("/users/me", {
+      method: "PATCH",
+      body: {
+        first_name: data?.firstName ?? firstName.value,
+        last_name: data?.lastName ?? lastName.value,
+      },
+    });
+
+    firstName.value = me.first_name;
+    lastName.value = me.last_name;
+    onboardingCompleted.value = me.onboarding_completed;
+
+    if (data?.profilePictureFile && me.id) {
+      const formData = new FormData();
+      formData.append("profile_picture", data.profilePictureFile);
+      const updated = await apiFetch<MeResponse>(`/users/${me.id}/profile-picture`, {
+        method: "PATCH",
+        body: formData,
+      });
+      avatar.value = updated.profile_picture ?? null;
+    }
+  };
+
+  const fetchMe = async () => {
+    const { apiFetch } = useApi();
+    const me = await apiFetch<MeResponse>("/users/me");
+
+    id.value = me.id;
+    firstName.value = me.first_name;
+    lastName.value = me.last_name;
+    email.value = me.email;
+    avatar.value = me.profile_picture ?? null;
+    onboardingCompleted.value = me.onboarding_completed;
+
+    const authStore = useAuthStore();
+    const status = await authStore.getTwoFactorStatus();
+    twoFactorEnabled.value = status.enabled;
+    isReady.value = true;
   };
 
   const fetchAnimals = async () => {
-    errorMessage.value = "";
-    loadUserFromStorage();
-
-    if (!userId.value) {
-      return;
-    }
+    if (!id.value) return;
+    const { apiFetch } = useApi();
+    const config = useRuntimeConfig();
+    const baseUrl = config.public.apiBase.replace(/\/api$/, "");
 
     isLoading.value = true;
-
     try {
-      const config = useRuntimeConfig();
-
-      const response = await fetch(
-        `${config.public.apiUrl}/animals/user/${userId.value}`,
-        {
-          method: "GET",
-          headers: getAuthHeaders(),
-        },
-      );
-
-      const result = await response.json();
-
-      if (!response.ok || !result.success) {
-        throw new Error(
-          result.error || "Erreur lors du chargement des animaux",
-        );
-      }
-
-      animals.value = result.data.map((animal: ApiAnimal) => ({
-        id: animal.id,
-        name: animal.name,
-        image: getImageUrl(
-          animal.profile_picture ||
-            animal.profile_picture_url ||
-            animal.image ||
-            null,
-        ),
-      }));
+      const result = await apiFetch<ApiAnimal[]>(`/animals/user/${id.value}`);
+      animals.value = result.map((animal: ApiAnimal) => {
+        const path = animal.profile_picture || animal.profile_picture_url || animal.image || null;
+        const image = path
+          ? path.startsWith("http") ? path : `${baseUrl}${path}`
+          : undefined;
+        return { id: animal.id, name: animal.name, image };
+      });
     } catch (error) {
-      errorMessage.value =
-        error instanceof Error
-          ? error.message
-          : "Erreur lors du chargement des animaux";
+      errorMessage.value = error instanceof Error ? error.message : "Erreur lors du chargement des animaux";
     } finally {
       isLoading.value = false;
     }
   };
 
-  const completeOnboarding = async () => {
-    // Plus tard, tu pourras appeler ton API ici :
-    // await $fetch("/api/me/onboarding", {
-    //   method: "PATCH",
-    //   body: {
-    //     onboardingCompleted: true,
-    //     notificationsPush: notificationsPush.value,
-    //     nightMode: nightMode.value,
-    //   },
-    // });
-
-    errorMessage.value = "";
-    loadUserFromStorage();
-
-    if (!userId.value) {
-      return;
-    }
-
-    isLoading.value = true;
-
-    try {
-      const config = useRuntimeConfig();
-
-      const response = await fetch(
-        `${config.public.apiUrl}/users/${userId.value}/onboarding`,
-        {
-          method: "PATCH",
-          headers: getAuthHeaders(),
-        },
-      );
-
-      const result = await response.json();
-
-      if (!response.ok || !result.success) {
-        throw new Error(result.error || "Erreur lors de l'onboarding");
-      }
-
-      onboardingCompleted.value = true;
-      localStorage.setItem("onboardingCompleted", "true");
-    } catch (error) {
-      errorMessage.value =
-        error instanceof Error ? error.message : "Erreur lors de l'onboarding";
-    } finally {
-      isLoading.value = false;
-    }
-  };
-
-  const resetUser = () => {
-    userId.value = null;
-    firstName.value = "";
-    lastName.value = "";
+  const reset = () => {
+    isReady.value = false;
+    id.value = null;
+    firstName.value = "John";
+    lastName.value = "Doe";
+    email.value = "";
     avatar.value = null;
     onboardingCompleted.value = false;
-    notificationsPush.value = true;
-    nightMode.value = false;
+    twoFactorEnabled.value = false;
     animals.value = [];
-    errorMessage.value = "";
-
-    localStorage.removeItem("accessToken");
-    localStorage.removeItem("refreshToken");
-    localStorage.removeItem("userId");
-    localStorage.removeItem("roleId");
-    localStorage.removeItem("firstName");
-    localStorage.removeItem("lastName");
-    localStorage.removeItem("onboardingCompleted");
   };
 
   return {
-    userId,
+    isReady,
+    id,
     firstName,
     lastName,
+    email,
     avatar,
     onboardingCompleted,
     notificationsPush,
     nightMode,
+    twoFactorEnabled,
     animals,
     isLoading,
     errorMessage,
     fullName,
-    loadUserFromStorage,
-    fetchCurrentUser,
-    fetchAnimals,
+    avatarUrl,
+    updateProfile,
     completeOnboarding,
-    resetUser,
+    fetchMe,
+    fetchAnimals,
+    reset,
   };
 });

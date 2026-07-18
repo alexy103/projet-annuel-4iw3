@@ -161,6 +161,25 @@ export const userService = {
     return toPublicUser(await usersRepository.updateProfilePicture(userId, picturePath));
   },
 
+  async updateProfile(userId: number, data: { first_name?: string; last_name?: string }): Promise<UserPublic> {
+    const existing: User = await usersRepository.findById(userId);
+    if (!existing) throw new AppError("User not found", 404);
+
+    const payload: Partial<UpdateUserPayload> = {};
+    if (data.first_name) payload.first_name = capitalizeFirst(data.first_name.trim());
+    if (data.last_name) payload.last_name = capitalize(data.last_name.trim());
+
+    if (Object.keys(payload).length > 0) {
+      await usersRepository.update(userId, payload as UpdateUserPayload);
+    }
+
+    if (!existing.onboarding_completed) {
+      await usersRepository.updateOnboardingCompleted(userId);
+    }
+
+    return toPublicUser(await usersRepository.findById(userId));
+  },
+
   async completeOnboarding(userId: number, callerId: number, role: string): Promise<UserPublic> {
     const existingUser: User = await usersRepository.findById(userId);
     if (!existingUser) throw new AppError("User not found", 404);

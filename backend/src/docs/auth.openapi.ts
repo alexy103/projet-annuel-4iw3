@@ -15,6 +15,8 @@ import {
   RefreshTokenSchema, RefreshTokenPayloadSchema, VerifyCodePayloadSchema, ResendCodePayloadSchema,
   ChangePasswordPayloadSchema, ResetPasswordPayloadSchema, UserSchema, RegisterPayloadSchema,
   GithubOAuthPayloadSchema,
+  TwoFactorSetupResponseSchema, TwoFactorCodePayloadSchema, TwoFactorVerifyPayloadSchema,
+  TwoFactorEnableResponseSchema, TwoFactorStatusSchema,
 } from "../schemas";
 
 registry.registerPath({
@@ -195,7 +197,7 @@ registry.registerPath({
   security: [{ ApiKeyAuth: [] }],
   path: "/auth/oauth/github",
   tags: ["Auth"],
-  summary: "Login or register with GitHub OAuth",
+  summary: "Login or register with GitHub OAuth (exchanges the authorization code server-side)",
   request: {
     body: {
       content: {
@@ -210,6 +212,115 @@ registry.registerPath({
     400: BadRequest,
     401: UnauthorizedResponse,
     403: ForbiddenResponse,
+    500: ServerErrorResponse,
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  security: [{ ApiKeyAuth: [] }, { BearerAuth: [] }],
+  path: "/auth/2fa/status",
+  tags: ["Auth"],
+  summary: "Get whether 2FA is enabled for the current user",
+  responses: {
+    200: JsonResponse(TwoFactorStatusSchema, "2FA status"),
+    401: UnauthorizedResponse,
+    403: ForbiddenResponse,
+    500: ServerErrorResponse,
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  security: [{ ApiKeyAuth: [] }, { BearerAuth: [] }],
+  path: "/auth/2fa/setup",
+  tags: ["Auth"],
+  summary: "Generate a TOTP secret and otpauth URL for the current user",
+  responses: {
+    200: JsonResponse(TwoFactorSetupResponseSchema, "TOTP secret generated"),
+    400: BadRequest,
+    401: UnauthorizedResponse,
+    403: ForbiddenResponse,
+    404: NotFoundResponse,
+    409: ConflictResponse,
+    500: ServerErrorResponse,
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  security: [{ ApiKeyAuth: [] }, { BearerAuth: [] }],
+  path: "/auth/2fa/enable",
+  tags: ["Auth"],
+  summary: "Confirm TOTP setup and enable 2FA",
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: TwoFactorCodePayloadSchema,
+        },
+      },
+    },
+  },
+  responses: {
+    200: JsonResponse(TwoFactorEnableResponseSchema, "2FA enabled, recovery codes returned"),
+    400: BadRequest,
+    401: UnauthorizedResponse,
+    403: ForbiddenResponse,
+    404: NotFoundResponse,
+    409: ConflictResponse,
+    500: ServerErrorResponse,
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  security: [{ ApiKeyAuth: [] }, { BearerAuth: [] }],
+  path: "/auth/2fa/disable",
+  tags: ["Auth"],
+  summary: "Disable 2FA for the current user",
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: TwoFactorCodePayloadSchema,
+        },
+      },
+    },
+  },
+  responses: {
+    200: JsonResponse(MessageResponseSchema, "2FA disabled"),
+    400: BadRequest,
+    401: UnauthorizedResponse,
+    403: ForbiddenResponse,
+    404: NotFoundResponse,
+    409: ConflictResponse,
+    500: ServerErrorResponse,
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  security: [{ ApiKeyAuth: [] }],
+  path: "/auth/2fa/verify",
+  tags: ["Auth"],
+  summary: "Verify TOTP/recovery code after a login requiring 2FA",
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: TwoFactorVerifyPayloadSchema,
+        },
+      },
+    },
+  },
+  responses: {
+    200: JsonResponse(LoginSchema, "Authenticated after 2FA verification"),
+    400: BadRequest,
+    401: UnauthorizedResponse,
+    403: ForbiddenResponse,
+    404: NotFoundResponse,
+    409: ConflictResponse,
     500: ServerErrorResponse,
   },
 });

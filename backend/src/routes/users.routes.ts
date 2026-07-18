@@ -2,6 +2,7 @@ import { Router } from "express";
 import { requireApiKey, requireAuth, uploadUserPicture, validateSchema } from "../middlewares";
 import {
   completeUserOnboarding,
+  updateMe,
   createPermissionToUser,
   createUser, deletePermissionFromUser,
   deleteUser, getMe, getPermissionsByUserId,
@@ -19,6 +20,8 @@ export const usersRouter: Router = Router();
 usersRouter.get("/", requireApiKey, requireAuth("admin"), getUsers);
 
 usersRouter.get("/me", requireApiKey, requireAuth(), getMe);
+
+usersRouter.patch("/me", requireApiKey, requireAuth(), updateMe);
 
 usersRouter.get("/:userId", requireApiKey, requireAuth("admin"), getUserById);
 

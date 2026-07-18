@@ -1,8 +1,9 @@
 import { AppError} from "../types";
-import {clinicsRepository, rolesRepository, sessionsRepository, usersRepository} from "../repositories";
+import {clinicsRepository, rolesRepository, sessionsRepository, users2FARepository, usersRepository} from "../repositories";
 import {CreateUserPayload, RegisterPayload, User, UserSession} from "../schemas";
 
 import {
+  generateRecoveryCodes,
   generateSecurePassword,
   generateVerificationCode,
   hashPassword,
@@ -16,9 +17,25 @@ import {
 } from "../utils";
 
 import jwt from "jsonwebtoken";
+import { authenticator } from "otplib";
 
 import { Request } from "express";
 import {userService} from "./users.service";
+
+const TWO_FACTOR_ISSUER = "VetApp";
+
+function parseRecoveryCodes(raw: unknown): string[] {
+  if (Array.isArray(raw)) return raw as string[];
+  if (typeof raw === "string") {
+    try {
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+}
 
 export const authService = {
   async register(data: RegisterPayload){
@@ -63,48 +80,186 @@ export const authService = {
       existingUser.password_hash,
     );
     if (!checkPassword) {
-      console.log("cc");
       throw new AppError("Invalid user or password", 401);
     }
 
-    const jwtSecret: string | undefined = process.env.JWT_SECRET;
-    if (!jwtSecret) {
-      console.log("cc2");
-      throw new AppError("Invalid user or password", 401);
+    const twoFA = await users2FARepository.findByUserId(existingUser.id);
+    if (twoFA && twoFA.is_enabled) {
+      return {
+        requiresTwoFactor: true as const,
+        pendingToken: this.createPendingTwoFactorToken(existingUser.id),
+      };
     }
+
+    return this.createSession(existingUser, req);
+  },
+
+  createPendingTwoFactorToken(userId: number): string {
+    const jwtSecret: string | undefined = process.env.JWT_SECRET;
+    if (!jwtSecret) throw new AppError("Server configuration error", 500);
+
+    return jwt.sign({ userId, purpose: "2fa" }, jwtSecret, {
+      expiresIn: "5m",
+    });
+  },
+
+  async createSession(user: User, req?: Request) {
+    const jwtSecret: string | undefined = process.env.JWT_SECRET;
+    if (!jwtSecret) throw new AppError("Server configuration error", 500);
 
     const jwtRefreshSecret: string | undefined = process.env.JWT_REFRESH_SECRET;
-    if (!jwtRefreshSecret) {
-      console.log("cc3");
-      throw new AppError("Invalid user or password", 401);
-    }
+    if (!jwtRefreshSecret) throw new AppError("Server configuration error", 500);
 
     const accessToken: string = jwt.sign(
-      { userId: existingUser.id },
+      { userId: user.id },
       jwtSecret,
       { expiresIn: "7d" },
     );
 
     const refreshToken: string = jwt.sign(
-      { userId: existingUser.id },
+      { userId: user.id },
       jwtRefreshSecret,
       { expiresIn: "24h" },
     );
 
     const session: UserSession = await sessionsRepository.create(
-      existingUser.id,
+      user.id,
       await hashPassword(refreshToken),
       req?.headers["user-agent"] || null,
       req?.ip || null,
     );
 
     return {
-      userId: existingUser.id,
-      roleId: existingUser.role_id,
-      accessToken: accessToken,
+      userId: user.id,
+      roleId: user.role_id,
+      accessToken,
       refreshToken,
       sessionId: session.id,
     };
+  },
+
+  async verifyTwoFactorLogin(pendingToken: string, code: string, req?: Request) {
+    const jwtSecret: string | undefined = process.env.JWT_SECRET;
+    if (!jwtSecret) throw new AppError("Server configuration error", 500);
+
+    let decoded: { userId: number; purpose?: string };
+    try {
+      decoded = jwt.verify(pendingToken, jwtSecret) as {
+        userId: number;
+        purpose?: string;
+      };
+    } catch {
+      throw new AppError("Invalid or expired pending token", 401);
+    }
+
+    if (decoded.purpose !== "2fa") {
+      throw new AppError("Invalid pending token", 401);
+    }
+
+    const user: User = await usersRepository.findById(decoded.userId);
+    if (!user) throw new AppError("User not found", 404);
+
+    const twoFA = await users2FARepository.findByUserId(user.id);
+    if (!twoFA || !twoFA.is_enabled || !twoFA.totp_secret) {
+      throw new AppError("2FA is not enabled for this user", 400);
+    }
+
+    const isValidTotp = authenticator.verify({
+      token: code,
+      secret: twoFA.totp_secret,
+    });
+
+    if (!isValidTotp) {
+      const recoveryCodes = parseRecoveryCodes(twoFA.recovery_codes);
+      const matchIndex = recoveryCodes.indexOf(code);
+      if (matchIndex === -1) {
+        throw new AppError("Invalid 2FA code", 401);
+      }
+      recoveryCodes.splice(matchIndex, 1);
+      await users2FARepository.update(twoFA.id, {
+        recovery_codes: recoveryCodes,
+      });
+    }
+
+    return this.createSession(user, req);
+  },
+
+  async getTwoFactorStatus(userId: number): Promise<{ enabled: boolean }> {
+    const twoFA = await users2FARepository.findByUserId(userId);
+    return { enabled: !!(twoFA && twoFA.is_enabled) };
+  },
+
+  async setupTwoFactor(userId: number) {
+    const user: User = await usersRepository.findById(userId);
+    if (!user) throw new AppError("User not found", 404);
+
+    const existing = await users2FARepository.findByUserId(userId);
+    if (existing && existing.is_enabled) {
+      throw new AppError("2FA is already enabled", 409);
+    }
+
+    const secret = authenticator.generateSecret();
+    const otpauthUrl = authenticator.keyuri(user.email, TWO_FACTOR_ISSUER, secret);
+
+    if (existing) {
+      await users2FARepository.update(existing.id, {
+        totp_secret: secret,
+        is_enabled: false,
+      });
+    } else {
+      await users2FARepository.create({
+        user_id: userId,
+        totp_secret: secret,
+        is_enabled: false,
+      });
+    }
+
+    return { secret, otpauthUrl };
+  },
+
+  async enableTwoFactor(userId: number, code: string) {
+    const twoFA = await users2FARepository.findByUserId(userId);
+    if (!twoFA || !twoFA.totp_secret) {
+      throw new AppError("2FA setup required before enabling", 400);
+    }
+    if (twoFA.is_enabled) {
+      throw new AppError("2FA is already enabled", 409);
+    }
+
+    const isValid = authenticator.verify({
+      token: code,
+      secret: twoFA.totp_secret,
+    });
+    if (!isValid) throw new AppError("Invalid TOTP code", 400);
+
+    const recoveryCodes = generateRecoveryCodes();
+    await users2FARepository.update(twoFA.id, {
+      is_enabled: true,
+      recovery_codes: recoveryCodes,
+    });
+
+    return { recoveryCodes };
+  },
+
+  async disableTwoFactor(userId: number, code: string) {
+    const twoFA = await users2FARepository.findByUserId(userId);
+    if (!twoFA || !twoFA.is_enabled || !twoFA.totp_secret) {
+      throw new AppError("2FA is not enabled", 400);
+    }
+
+    const isValidTotp = authenticator.verify({
+      token: code,
+      secret: twoFA.totp_secret,
+    });
+
+    if (!isValidTotp) {
+      const recoveryCodes = parseRecoveryCodes(twoFA.recovery_codes);
+      if (!recoveryCodes.includes(code)) {
+        throw new AppError("Invalid 2FA code", 401);
+      }
+    }
+
+    await users2FARepository.delete(twoFA.id);
   },
 
   async refreshToken(refreshToken: string) {
@@ -168,7 +323,45 @@ export const authService = {
     }
   },
 
-  async githubOAuth(accessToken: string, req?: Request) {
+  async githubOAuth(code: string, req?: Request) {
+    const clientId = process.env.GITHUB_CLIENT_ID;
+    const clientSecret = process.env.GITHUB_CLIENT_SECRET;
+    if (!clientId || !clientSecret) {
+      throw new AppError("GitHub OAuth is not configured", 500);
+    }
+
+    const tokenRes = await fetch("https://github.com/login/oauth/access_token", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({
+        client_id: clientId,
+        client_secret: clientSecret,
+        code,
+      }),
+    });
+
+    if (!tokenRes.ok) {
+      throw new AppError("Failed to exchange GitHub authorization code", 401);
+    }
+
+    const tokenData = (await tokenRes.json()) as {
+      access_token?: string;
+      error?: string;
+      error_description?: string;
+    };
+
+    if (!tokenData.access_token) {
+      throw new AppError(
+        tokenData.error_description ?? "Invalid GitHub authorization code",
+        401,
+      );
+    }
+
+    const accessToken = tokenData.access_token;
+
     const userRes = await fetch("https://api.github.com/user", {
       headers: { Authorization: `Bearer ${accessToken}`, "User-Agent": "vetapp" },
     });
@@ -214,27 +407,15 @@ export const authService = {
 
     if (!user.is_activated) throw new AppError("Account is disabled", 403);
 
-    const jwtSecret = process.env.JWT_SECRET;
-    const jwtRefreshSecret = process.env.JWT_REFRESH_SECRET;
-    if (!jwtSecret || !jwtRefreshSecret) throw new AppError("Server configuration error", 500);
+    const twoFA = await users2FARepository.findByUserId(user.id);
+    if (twoFA && twoFA.is_enabled) {
+      return {
+        requiresTwoFactor: true as const,
+        pendingToken: this.createPendingTwoFactorToken(user.id),
+      };
+    }
 
-    const newAccessToken = jwt.sign({ userId: user.id }, jwtSecret, { expiresIn: "7d" });
-    const newRefreshToken = jwt.sign({ userId: user.id }, jwtRefreshSecret, { expiresIn: "24h" });
-
-    const session: UserSession = await sessionsRepository.create(
-      user.id,
-      await hashPassword(newRefreshToken),
-      req?.headers["user-agent"] || null,
-      req?.ip || null,
-    );
-
-    return {
-      userId: user.id,
-      roleId: user.role_id,
-      accessToken: newAccessToken,
-      refreshToken: newRefreshToken,
-      sessionId: session.id,
-    };
+    return this.createSession(user, req);
   },
 
   async logout(userId: number): Promise<void> {
