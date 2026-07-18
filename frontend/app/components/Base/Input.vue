@@ -4,10 +4,21 @@ const props = defineProps<{
   placeholder?: string;
   type?: string;
   value?: string;
+  modelValue?: string;
   small?: boolean;
 }>();
 
-const inputValue = ref(props.value || "");
+const emit = defineEmits<{
+  "update:modelValue": [value: string];
+}>();
+
+// `value` is kept as a static initial value for uncontrolled/legacy usages
+// (e.g. display-only fields). `modelValue` takes over as soon as a parent
+// binds `v-model` on the component.
+const inputValue = computed({
+  get: () => props.modelValue ?? props.value ?? "",
+  set: (value: string) => emit("update:modelValue", value),
+});
 </script>
 
 <template>

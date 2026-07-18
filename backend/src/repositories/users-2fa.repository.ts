@@ -30,14 +30,23 @@ class Users2FARepository extends BaseRepository<
     id: number,
     data: Partial<UpdateUsers2FAPayload>,
   ): Promise<Users2FA> {
-    const payload = {
-      ...data,
-      recovery_codes:
-        data.recovery_codes !== undefined
-          ? JSON.stringify(data.recovery_codes)
-          : undefined,
-    };
-    return super.update(id, payload as any);
+    const payload: Record<string, unknown> = { ...data };
+    if (data.recovery_codes !== undefined) {
+      payload.recovery_codes = JSON.stringify(data.recovery_codes);
+    }
+
+    const keys = Object.keys(payload);
+    if (keys.length === 0) throw new Error("No fields to update");
+
+    const values = Object.values(payload);
+    const setClause = keys.map((key, i) => `${key} = $${i + 1}`).join(", ");
+
+    const result = await db.query<Users2FA>(
+      `UPDATE users_2fa SET ${setClause} WHERE id = $${keys.length + 1} RETURNING *`,
+      [...values, id],
+    );
+    if (!result.rows[0]) throw new Error("users_2fa update failed");
+    return result.rows[0];
   }
 
   async findByUserId(userId: number): Promise<Users2FA | null> {

@@ -4,13 +4,26 @@ type Animal = {
   image: string;
 };
 
+interface MeResponse {
+  id: number;
+  first_name: string;
+  last_name: string;
+  email: string;
+  profile_picture?: string | null;
+  onboarding_completed: boolean;
+}
+
 export const useUserStore = defineStore("user", () => {
+  const isReady = ref(false);
+  const id = ref<number | null>(null);
   const firstName = ref("John");
   const lastName = ref("Doe");
+  const email = ref("");
   const avatar = ref<string | null>(null);
   const onboardingCompleted = ref(false);
   const notificationsPush = ref(true);
   const nightMode = ref(false);
+  const twoFactorEnabled = ref(false);
 
   const animals = ref<Animal[]>([
     // {
@@ -24,29 +37,108 @@ export const useUserStore = defineStore("user", () => {
     return `${firstName.value} ${lastName.value}`;
   });
 
-  const completeOnboarding = async () => {
-    // Plus tard, tu pourras appeler ton API ici :
-    // await $fetch("/api/me/onboarding", {
-    //   method: "PATCH",
-    //   body: {
-    //     onboardingCompleted: true,
-    //     notificationsPush: notificationsPush.value,
-    //     nightMode: nightMode.value,
-    //   },
-    // });
+  const avatarUrl = computed(() => {
+    if (!avatar.value) return null;
+    if (avatar.value.startsWith("http")) return avatar.value;
+    const config = useRuntimeConfig();
+    const base = config.public.apiBase.replace(/\/api$/, "");
+    return `${base}${avatar.value}`;
+  });
 
-    onboardingCompleted.value = true;
+  const updateProfile = async (data: { firstName?: string; lastName?: string; profilePictureFile?: File }) => {
+    const { apiFetch } = useApi();
+    const me = await apiFetch<MeResponse>("/users/me", {
+      method: "PATCH",
+      body: {
+        first_name: data.firstName ?? firstName.value,
+        last_name: data.lastName ?? lastName.value,
+      },
+    });
+    firstName.value = me.first_name;
+    lastName.value = me.last_name;
+
+    if (data.profilePictureFile) {
+      const formData = new FormData();
+      formData.append("profile_picture", data.profilePictureFile);
+      const updated = await apiFetch<MeResponse>(`/users/${me.id}/profile-picture`, {
+        method: "PATCH",
+        body: formData,
+      });
+      avatar.value = updated.profile_picture ?? null;
+    }
+  };
+
+  const completeOnboarding = async (data?: { firstName?: string; lastName?: string; profilePictureFile?: File }) => {
+    const { apiFetch } = useApi();
+    const me = await apiFetch<MeResponse>("/users/me", {
+      method: "PATCH",
+      body: {
+        first_name: data?.firstName ?? firstName.value,
+        last_name: data?.lastName ?? lastName.value,
+      },
+    });
+
+    firstName.value = me.first_name;
+    lastName.value = me.last_name;
+    onboardingCompleted.value = me.onboarding_completed;
+
+    if (data?.profilePictureFile && me.id) {
+      const formData = new FormData();
+      formData.append("profile_picture", data.profilePictureFile);
+      const updated = await apiFetch<MeResponse>(`/users/${me.id}/profile-picture`, {
+        method: "PATCH",
+        body: formData,
+      });
+      avatar.value = updated.profile_picture ?? null;
+    }
+  };
+
+  const fetchMe = async () => {
+    const { apiFetch } = useApi();
+    const me = await apiFetch<MeResponse>("/users/me");
+
+    id.value = me.id;
+    firstName.value = me.first_name;
+    lastName.value = me.last_name;
+    email.value = me.email;
+    avatar.value = me.profile_picture ?? null;
+    onboardingCompleted.value = me.onboarding_completed;
+
+    const authStore = useAuthStore();
+    const status = await authStore.getTwoFactorStatus();
+    twoFactorEnabled.value = status.enabled;
+    isReady.value = true;
+  };
+
+  const reset = () => {
+    isReady.value = false;
+    id.value = null;
+    firstName.value = "John";
+    lastName.value = "Doe";
+    email.value = "";
+    avatar.value = null;
+    onboardingCompleted.value = false;
+    twoFactorEnabled.value = false;
+    animals.value = [];
   };
 
   return {
+    isReady,
+    id,
     firstName,
     lastName,
+    email,
     avatar,
     onboardingCompleted,
     notificationsPush,
     nightMode,
+    twoFactorEnabled,
     animals,
     fullName,
+    avatarUrl,
+    updateProfile,
     completeOnboarding,
+    fetchMe,
+    reset,
   };
 });

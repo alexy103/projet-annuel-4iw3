@@ -1,22 +1,40 @@
 <script setup lang="ts">
 const userStore = useUserStore();
 const profilePicture = ref<string | null>(null);
+const profilePictureFile = ref<File | null>(null);
+
+const firstName = ref(userStore.firstName);
+const lastName = ref(userStore.lastName);
 
 definePageMeta({
   layout: "onboarding",
 });
 
+const onboardingError = ref("");
+const isCompleting = ref(false);
+
 const completeOnboarding = async () => {
-  await userStore.completeOnboarding();
-  setPageLayout("default");
+  onboardingError.value = "";
+  isCompleting.value = true;
+  try {
+    await userStore.completeOnboarding({
+      firstName: firstName.value,
+      lastName: lastName.value,
+      profilePictureFile: profilePictureFile.value ?? undefined,
+    });
+    setPageLayout("default");
+  } catch (error) {
+    onboardingError.value = error instanceof Error ? error.message : "Erreur lors de la sauvegarde";
+  } finally {
+    isCompleting.value = false;
+  }
 };
 
 const handleProfilePictureUpload = (event: Event) => {
   const input = event.target as HTMLInputElement;
   const file = input.files?.[0];
-
   if (!file) return;
-
+  profilePictureFile.value = file;
   profilePicture.value = URL.createObjectURL(file);
 };
 </script>
@@ -61,8 +79,8 @@ const handleProfilePictureUpload = (event: Event) => {
     <h2 class="text-xl font-bold">Faisons connaissance...</h2>
 
     <div class="flex items-center justify-around gap-4">
-      <BaseInput label="Prénom" :value="userStore.firstName" />
-      <BaseInput label="Nom" :value="userStore.lastName" />
+      <BaseInput label="Prénom" v-model="firstName" />
+      <BaseInput label="Nom" v-model="lastName" />
     </div>
 
     <h2 class="text-xl font-bold">Une photo ?</h2>
@@ -101,8 +119,10 @@ const handleProfilePictureUpload = (event: Event) => {
       <BaseToggle v-model="userStore.nightMode" />
     </div>
 
-    <BaseButton class="flex justify-center" @click="completeOnboarding">
-      Terminer
+    <p v-if="onboardingError" class="text-center text-sm text-red-500">{{ onboardingError }}</p>
+
+    <BaseButton class="flex justify-center" :disabled="isCompleting" @click="completeOnboarding">
+      {{ isCompleting ? "Enregistrement..." : "Terminer" }}
     </BaseButton>
   </div>
 </template>

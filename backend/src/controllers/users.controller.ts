@@ -24,6 +24,20 @@ export const getMe = async (req: Request, res: Response) => {
   }
 };
 
+export const updateMe = async (req: Request, res: Response) => {
+  try {
+    const { userId } = (req as AuthenticatedRequest).user;
+    const { first_name, last_name } = req.body as { first_name?: string; last_name?: string };
+    const data: { first_name?: string; last_name?: string } = {};
+    if (first_name !== undefined) data.first_name = first_name;
+    if (last_name !== undefined) data.last_name = last_name;
+    const user: UserPublic = await userService.updateProfile(userId, data);
+    return ApiResponse.success(res, user);
+  } catch (error) {
+    return ApiResponse.getError(res, error);
+  }
+};
+
 export const getUserById = async (req: Request, res: Response) => {
   try {
     const userId: string | undefined = req.params.userId;
