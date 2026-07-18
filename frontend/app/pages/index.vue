@@ -1,4 +1,35 @@
 <script setup lang="ts">
+type ApiAppointment = {
+  id: number;
+  date: string;
+  time: string;
+  reason_id: number;
+  is_completed: boolean;
+  user_id: number;
+  animal_id: number;
+  clinic_id: number;
+};
+
+type ApiClinic = {
+  id: number;
+  name: string;
+};
+
+type ApiAppointmentReason = {
+  id: number;
+  label: string;
+};
+
+type UpcomingAppointmentCard = {
+  id: number;
+  animal: string;
+  type: string;
+  date: string;
+  time: string;
+  clinic: string;
+  isToday: boolean;
+};
+
 const userStore = useUserStore();
 const profilePicture = ref<string | null>(null);
 const profilePictureFile = ref<File | null>(null);
@@ -6,8 +37,110 @@ const profilePictureFile = ref<File | null>(null);
 const firstName = ref(userStore.firstName);
 const lastName = ref(userStore.lastName);
 
+const isReady = ref(false);
+const isLoadingAppointments = ref(false);
+const appointmentsErrorMessage = ref("");
+
+const appointments = ref<ApiAppointment[]>([]);
+const clinics = ref<ApiClinic[]>([]);
+const appointmentReasons = ref<ApiAppointmentReason[]>([]);
+
+const getDatePart = (rawDate: string): string => {
+  return rawDate.includes("T") ? rawDate.split("T")[0] : rawDate;
+};
+
+const buildAppointmentDateTime = (rawDate: string, rawTime: string): Date => {
+  const datePart = getDatePart(rawDate);
+  const [year, month, day] = datePart.split("-").map(Number);
+  const [hours, minutes] = rawTime.split(":").map(Number);
+  return new Date(year, month - 1, day, hours ?? 0, minutes ?? 0);
+};
+
+const isSameDay = (a: Date, b: Date): boolean => {
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  );
+};
+
+const formatDateFr = (rawDate: string): string => {
+  const datePart = getDatePart(rawDate);
+  const [year, month, day] = datePart.split("-").map(Number);
+  const date = new Date(year, month - 1, day);
+  return new Intl.DateTimeFormat("fr-FR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(date);
+};
+
+const formatTimeFr = (rawTime: string): string => {
+  const [hours = "00", minutes = "00"] = rawTime.split(":");
+  return `${hours}h${minutes}`;
+};
+
+const upcomingAppointments = computed<UpcomingAppointmentCard[]>(() => {
+  const now = new Date();
+  const clinicsById = new Map(clinics.value.map((clinic) => [clinic.id, clinic]));
+  const reasonsById = new Map(appointmentReasons.value.map((reason) => [reason.id, reason]));
+  const animalsById = new Map(userStore.animals.map((animal) => [animal.id, animal]));
+
+  return appointments.value
+    .filter((appointment) => !appointment.is_completed)
+    .map((appointment) => ({
+      appointment,
+      startsAt: buildAppointmentDateTime(appointment.date, appointment.time),
+    }))
+    .filter(({ startsAt }) => startsAt.getTime() >= now.getTime())
+    .sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime())
+    .slice(0, 10)
+    .map(({ appointment, startsAt }) => ({
+      id: appointment.id,
+      animal: animalsById.get(appointment.animal_id)?.name ?? `Animal #${appointment.animal_id}`,
+      type: reasonsById.get(appointment.reason_id)?.label ?? `Motif #${appointment.reason_id}`,
+      date: formatDateFr(appointment.date),
+      time: formatTimeFr(appointment.time),
+      clinic: clinicsById.get(appointment.clinic_id)?.name ?? `Clinique #${appointment.clinic_id}`,
+      isToday: isSameDay(startsAt, now),
+    }));
+});
+
+const fetchAppointmentsData = async () => {
+  appointmentsErrorMessage.value = "";
+  isLoadingAppointments.value = true;
+  try {
+    const { apiFetch } = useApi();
+    const [appointmentsResult, clinicsResult, reasonsResult] = await Promise.all([
+      apiFetch<ApiAppointment[]>("/appointments"),
+      apiFetch<ApiClinic[]>("/clinics"),
+      apiFetch<ApiAppointmentReason[]>("/appointment-reasons"),
+    ]);
+    appointments.value = appointmentsResult;
+    clinics.value = clinicsResult;
+    appointmentReasons.value = reasonsResult;
+  } catch (error) {
+    appointmentsErrorMessage.value =
+      error instanceof Error ? error.message : "Impossible de charger les rendez-vous";
+  } finally {
+    isLoadingAppointments.value = false;
+  }
+};
+
 definePageMeta({
-  layout: "onboarding",
+  // layout: "onboarding",
+});
+
+onMounted(async () => {
+  await userStore.fetchAnimals();
+  await fetchAppointmentsData();
+  isReady.value = true;
+});
+
+onUnmounted(() => {
+  if (profilePicture.value) {
+    URL.revokeObjectURL(profilePicture.value);
+  }
 });
 
 const onboardingError = ref("");
@@ -35,31 +168,80 @@ const handleProfilePictureUpload = (event: Event) => {
   const file = input.files?.[0];
   if (!file) return;
   profilePictureFile.value = file;
+  if (profilePicture.value) {
+    URL.revokeObjectURL(profilePicture.value);
+  }
   profilePicture.value = URL.createObjectURL(file);
 };
 </script>
 
 <template>
-  <div v-if="userStore.onboardingCompleted && userStore.animals.length > 0">
+  <div v-if="!isReady" class="flex h-screen items-center justify-center">
+    <Icon name="eos-icons:loading" class="text-grey-500 size-10 animate-spin" />
+  </div>
+
+  <div
+    v-else-if="userStore.onboardingCompleted && userStore.animals.length > 0"
+  >
     <h1 class="mt-2 mb-4 text-2xl font-bold">
       Bienvenue, {{ userStore.firstName }} !
     </h1>
 
     <BaseSection title="À venir" action="Tout voir" link="/calendar">
       <div class="-mx-4 flex gap-2 overflow-x-auto px-4">
-        <Appointment v-for="i in 4" :key="i" />
+        <div v-if="isLoadingAppointments" class="py-2 text-sm text-gray-600">
+          Chargement des rendez-vous...
+        </div>
+
+        <div
+          v-else-if="appointmentsErrorMessage"
+          class="py-2 text-sm text-red-600"
+        >
+          {{ appointmentsErrorMessage }}
+        </div>
+
+        <div
+          v-else-if="upcomingAppointments.length === 0"
+          class="py-2 text-sm text-gray-600"
+        >
+          Aucun rendez-vous à venir.
+        </div>
+
+        <Appointment
+          v-for="appointment in upcomingAppointments"
+          v-else
+          :key="appointment.id"
+          compact
+          :id="appointment.id"
+          :animal="appointment.animal"
+          :type="appointment.type"
+          :date="appointment.date"
+          :time="appointment.time"
+          :clinic="appointment.clinic"
+          :today="appointment.isToday"
+        />
       </div>
     </BaseSection>
 
-    <BaseSection title="Mes animaux" action="Ajouter un animal" color="blue">
+    <BaseSection
+      title="Mes animaux"
+      action="Ajouter un animal"
+      link="/add-animal"
+      color="blue"
+    >
       <div class="grid w-full grid-cols-2 justify-items-center gap-4">
-        <AnimalCard v-for="i in 4" :key="i" src="/kyky.jpg" />
+        <AnimalCard
+          v-for="animal in userStore.animals"
+          :key="animal.id"
+          :src="animal.image"
+          :id="animal.id"
+        />
       </div>
     </BaseSection>
   </div>
 
   <div
-    v-else-if="userStore.onboardingCompleted"
+    v-else-if="userStore.onboardingCompleted && userStore.animals.length === 0"
     class="absolute top-1/2 left-1/2 min-w-90 -translate-1/2 space-y-4 text-center lg:space-y-8"
   >
     <h2 class="text-xl font-bold">
@@ -73,10 +255,10 @@ const handleProfilePictureUpload = (event: Event) => {
     </NuxtLink>
   </div>
 
-  <div v-else class="space-y-4">
-    <h1 class="mt-2 text-2xl font-bold">Bienvenue par minous !</h1>
-
-    <h2 class="text-xl font-bold">Faisons connaissance...</h2>
+  <div v-else-if="userStore.onboardingCompleted === false" class="space-y-4">
+    <h1 class="mt-2 text-2xl font-bold">
+      Bienvenue par minous, {{ userStore.firstName }}
+    </h1>
 
     <div class="flex items-center justify-around gap-4">
       <BaseInput label="Prénom" v-model="firstName" />
@@ -124,5 +306,9 @@ const handleProfilePictureUpload = (event: Event) => {
     <BaseButton class="flex justify-center" :disabled="isCompleting" @click="completeOnboarding">
       {{ isCompleting ? "Enregistrement..." : "Terminer" }}
     </BaseButton>
+  </div>
+
+  <div v-else class="flex justify-center py-8">
+    <Icon name="eos-icons:loading" class="text-grey-500 size-10 animate-spin" />
   </div>
 </template>

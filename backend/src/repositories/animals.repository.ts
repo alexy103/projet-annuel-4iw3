@@ -132,8 +132,53 @@ class AnimalRepository extends BaseRepository<Animal, CreateAnimalPayload, Updat
 
     return animal;
   }
+
+  async deleteWithDependencies(animalId: number): Promise<Animal> {
+    const client = await db.connect();
+
+    try {
+      await client.query("BEGIN");
+
+      await client.query(
+        `DELETE FROM treatment_reminders tr
+         USING treatments t
+         WHERE tr.treatment_id = t.id AND t.animal_id = $1`,
+        [animalId],
+      );
+
+      await client.query(
+        `DELETE FROM consultations c
+         USING appointments a
+         WHERE c.appointment_id = a.id AND a.animal_id = $1`,
+        [animalId],
+      );
+
+      await client.query(`DELETE FROM appointments WHERE animal_id = $1`, [animalId]);
+      await client.query(`DELETE FROM cares WHERE animal_id = $1`, [animalId]);
+      await client.query(`DELETE FROM height_records WHERE animal_id = $1`, [animalId]);
+      await client.query(`DELETE FROM weight_records WHERE animal_id = $1`, [animalId]);
+      await client.query(`DELETE FROM treatments WHERE animal_id = $1`, [animalId]);
+
+      const result = await client.query<Animal>(
+        `DELETE FROM ${this.table}
+         WHERE id = $1
+         RETURNING *`,
+        [animalId],
+      );
+
+      const animal: Animal | undefined = result.rows[0];
+      if (!animal) throw new AppError("Item deleted failed", 400);
+
+      await client.query("COMMIT");
+      return animal;
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
 }
 
 export const animalsRepository = new AnimalRepository();
-
 

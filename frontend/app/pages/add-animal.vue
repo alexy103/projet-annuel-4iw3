@@ -1,13 +1,127 @@
 <script setup lang="ts">
 import {
   animalBreedsBySpecies,
-  animalSpeciesOptions,
   type AnimalBreed,
   type AnimalGender,
-  type AnimalSpecies,
 } from "~/types/animal";
 
+type Species = {
+  id: number;
+  name: string;
+};
+
+type BreedSpeciesName = keyof typeof animalBreedsBySpecies;
+
+const userStore = useUserStore();
+
 const profilePicture = ref<string | null>(null);
+const profilePictureFile = ref<File | null>(null);
+
+const name = ref("");
+const gender = ref<AnimalGender | null>(null);
+
+const speciesList = ref<Species[]>([]);
+const species = ref<number | null>(null);
+
+const speciesOptions = computed(() => {
+  return speciesList.value.map((species) => species.name);
+});
+
+const selectedSpeciesName = computed(() => {
+  return (
+    speciesList.value.find((item) => item.id === species.value)?.name ?? null
+  );
+});
+
+const breedOptions = computed<AnimalBreed[]>(() => {
+  const speciesName = selectedSpeciesName.value;
+
+  if (!speciesName || !(speciesName in animalBreedsBySpecies)) {
+    return [];
+  }
+
+  return [...animalBreedsBySpecies[speciesName as BreedSpeciesName]];
+});
+
+const hasBreedOptions = computed(() => {
+  return breedOptions.value.length > 0;
+});
+
+const isSpeciesEmpty = computed(() => {
+  return species.value === null;
+});
+
+const getDefaultBreed = (speciesName: string | null): AnimalBreed | null => {
+  if (!speciesName || !(speciesName in animalBreedsBySpecies)) {
+    return null;
+  }
+
+  return animalBreedsBySpecies[speciesName as BreedSpeciesName][0] ?? null;
+};
+
+const breed = ref<string | null>(null);
+
+const birthDate = ref("");
+const adoptionDate = ref("");
+const weight = ref("");
+const height = ref("");
+
+const errorMessage = ref("");
+const isLoading = ref(false);
+const isLoadingSpecies = ref(false);
+
+const getAuthHeaders = () => {
+  const config = useRuntimeConfig();
+  const accessToken = localStorage.getItem("accessToken");
+
+  return {
+    "x-api-key": config.public.apiKey,
+    Authorization: `Bearer ${accessToken}`,
+  };
+};
+
+const fetchSpecies = async () => {
+  errorMessage.value = "";
+  isLoadingSpecies.value = true;
+
+  try {
+    const config = useRuntimeConfig();
+
+    const response = await fetch(`${config.public.apiUrl}/species`, {
+      method: "GET",
+      headers: getAuthHeaders(),
+    });
+
+    const result = await response.json();
+
+    if (!response.ok || !result.success) {
+      throw new Error(result.error || "Erreur lors du chargement des espèces");
+    }
+
+    speciesList.value = result.data;
+  } catch (error) {
+    errorMessage.value =
+      error instanceof Error
+        ? error.message
+        : "Erreur lors du chargement des espèces";
+  } finally {
+    isLoadingSpecies.value = false;
+  }
+};
+
+watch(selectedSpeciesName, (newSpeciesName) => {
+  breed.value = getDefaultBreed(newSpeciesName);
+});
+
+onMounted(async () => {
+  await fetchSpecies();
+});
+
+onUnmounted(() => {
+  if (profilePicture.value) {
+    URL.revokeObjectURL(profilePicture.value);
+  }
+});
 
 const handleProfilePictureUpload = (event: Event) => {
   const input = event.target as HTMLInputElement;
@@ -15,53 +129,131 @@ const handleProfilePictureUpload = (event: Event) => {
 
   if (!file) return;
 
+  if (profilePicture.value) {
+    URL.revokeObjectURL(profilePicture.value);
+  }
+
+  profilePictureFile.value = file;
   profilePicture.value = URL.createObjectURL(file);
 };
 
-const gender = ref<AnimalGender | null>(null);
+const handleSpeciesChange = (speciesName: string | number | null) => {
+  const selectedSpecies = speciesList.value.find(
+    (item) => item.name === String(speciesName),
+  );
 
-const speciesOptions = animalSpeciesOptions;
-
-const species = ref<AnimalSpecies | null>(null);
-
-const breedOptions = computed<AnimalBreed[]>(() => {
-  if (!species.value) return [];
-
-  return [...animalBreedsBySpecies[species.value]];
-});
-
-const isSpeciesEmpty = computed(() => {
-  return species.value === null;
-});
-
-const getDefaultBreed = (species: AnimalSpecies | null): AnimalBreed | null => {
-  if (!species) return null;
-
-  return animalBreedsBySpecies[species][0] ?? null;
+  species.value = selectedSpecies?.id ?? null;
 };
 
-const breed = ref<AnimalBreed | null>(getDefaultBreed(species.value));
+const handleAddAnimal = async () => {
+  errorMessage.value = "";
 
-watch(species, (newSpecies) => {
-  breed.value = getDefaultBreed(newSpecies);
-});
+  if (!name.value || !gender.value || !species.value || !breed.value) {
+    errorMessage.value = "Tous les champs obligatoires doivent être remplis";
+    return;
+  }
+
+  if (!birthDate.value || !adoptionDate.value) {
+    errorMessage.value = "Les dates sont obligatoires";
+    return;
+  }
+
+  isLoading.value = true;
+
+  try {
+    const config = useRuntimeConfig();
+
+    const createResponse = await fetch(`${config.public.apiUrl}/animals`, {
+      method: "POST",
+      headers: {
+        ...getAuthHeaders(),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        name: name.value,
+        breed: breed.value,
+        birth_date: birthDate.value,
+        adoption_date: adoptionDate.value,
+        sex: gender.value === "male",
+        species_id: species.value,
+        is_sterilized: false,
+        is_shared: false,
+        is_deceased: false,
+      }),
+    });
+
+    const createResult = await createResponse.json();
+
+    if (!createResponse.ok || !createResult.success) {
+      throw new Error(
+        createResult.error || "Erreur lors de l'ajout de l'animal",
+      );
+    }
+
+    const animalId = createResult.data.id;
+
+    if (profilePictureFile.value) {
+      const formData = new FormData();
+
+      formData.append("profile_picture", profilePictureFile.value);
+
+      const uploadResponse = await fetch(
+        `${config.public.apiUrl}/animals/${animalId}/profile-picture`,
+        {
+          method: "PATCH",
+          headers: getAuthHeaders(),
+          body: formData,
+        },
+      );
+
+      const contentType = uploadResponse.headers.get("content-type");
+      const uploadResult = contentType?.includes("application/json")
+        ? await uploadResponse.json()
+        : null;
+
+      if (!uploadResponse.ok || !uploadResult?.success) {
+        throw new Error(
+          uploadResult?.error ||
+            "L'animal a été créé, mais la photo n'a pas pu être envoyée",
+        );
+      }
+    }
+
+    await userStore.fetchAnimals();
+
+    await navigateTo("/");
+  } catch (error) {
+    errorMessage.value =
+      error instanceof Error
+        ? error.message
+        : "Erreur lors de l'ajout de l'animal";
+  } finally {
+    isLoading.value = false;
+  }
+};
 </script>
 
 <template>
-  <div class="space-y-6">
+  <form class="space-y-6" @submit.prevent="handleAddAnimal">
     <h1 class="mt-2 text-2xl font-bold">Qui rejoint la famille ?</h1>
 
-    <div class="flex items-center justify-around gap-4">
-      <BaseInput label="Nom" />
-      <div class="flex items-center justify-between gap-2">
+    <div class="grid grid-cols-2 items-start gap-4">
+      <div class="w-full max-w-48 justify-self-center">
+        <BaseInput v-model="name" label="Nom" />
+      </div>
+
+      <div class="flex items-center justify-center gap-2">
         <button
+          type="button"
           class="flex size-12 cursor-pointer items-center justify-center rounded-full"
           :class="gender === 'male' ? 'bg-green-300' : 'bg-grey-500'"
           @click="gender = 'male'"
         >
           <Icon name="material-symbols:male" class="w-full p-4 text-blue-700" />
         </button>
+
         <button
+          type="button"
           class="flex size-12 cursor-pointer items-center justify-center rounded-full"
           :class="gender === 'female' ? 'bg-green-300' : 'bg-grey-500'"
           @click="gender = 'female'"
@@ -71,21 +263,37 @@ watch(species, (newSpecies) => {
       </div>
     </div>
 
-    <div class="flex items-center justify-around gap-4">
-      <BaseSelect
-        id="species"
-        label="Espèce"
-        v-model="species"
-        :options="speciesOptions"
-      />
+    <div class="grid grid-cols-2 items-start gap-4">
+      <div class="w-full max-w-48 justify-self-center">
+        <BaseSelect
+          id="species"
+          label="Espèce"
+          :model-value="selectedSpeciesName"
+          :options="speciesOptions"
+          :disabled="isLoadingSpecies"
+          addClass="w-full"
+          @update:model-value="handleSpeciesChange"
+        />
+      </div>
 
-      <BaseSelect
-        id="breed"
-        label="Race"
-        v-model="breed"
-        :options="breedOptions"
-        :disabled="isSpeciesEmpty"
-      />
+      <div class="w-full max-w-48 justify-self-center">
+        <BaseSelect
+          v-if="hasBreedOptions"
+          id="breed"
+          label="Race"
+          v-model="breed"
+          :options="breedOptions"
+          :disabled="isSpeciesEmpty"
+          addClass="w-full"
+        />
+
+        <BaseInput
+          v-else
+          v-model="breed"
+          label="Race"
+          :disabled="isSpeciesEmpty"
+        />
+      </div>
     </div>
 
     <div class="space-y-2">
@@ -123,18 +331,18 @@ watch(species, (newSpecies) => {
 
       <div class="flex items-center justify-between">
         <p>Date de naissance</p>
-        <BaseInput type="date" />
+        <BaseInput v-model="birthDate" type="date" />
       </div>
 
       <div class="flex items-center justify-between">
         <p>Date d'adoption</p>
-        <BaseInput type="date" />
+        <BaseInput v-model="adoptionDate" type="date" />
       </div>
 
       <div class="flex items-center justify-between">
         <p>Poids</p>
         <div class="flex gap-2">
-          <BaseInput type="number" small />
+          <BaseInput v-model="weight" type="number" small />
           <span class="min-w-5">kg</span>
         </div>
       </div>
@@ -142,12 +350,18 @@ watch(species, (newSpecies) => {
       <div class="flex items-center justify-between">
         <p>Taille</p>
         <div class="flex gap-2">
-          <BaseInput type="number" small />
+          <BaseInput v-model="height" type="number" small />
           <span class="min-w-5">cm</span>
         </div>
       </div>
     </div>
 
-    <BaseButton class="flex justify-center">Ajouter</BaseButton>
-  </div>
+    <p v-if="errorMessage" class="text-center text-sm text-red-500">
+      {{ errorMessage }}
+    </p>
+
+    <BaseButton class="flex justify-center" type="submit">
+      {{ isLoading ? "Ajout..." : "Ajouter" }}
+    </BaseButton>
+  </form>
 </template>

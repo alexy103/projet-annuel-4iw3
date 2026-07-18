@@ -64,8 +64,6 @@ const submitVerify = async () => {
   isVerifying.value = true;
   try {
     await authStore.verifyEmailCode(email.value, verificationCode.value);
-    // On vient de vérifier l'e-mail : on connecte directement l'utilisateur
-    // avec le mot de passe saisi lors de l'inscription.
     const result = await authStore.login(email.value, password.value);
     if (!result.requiresTwoFactor) {
       await userStore.fetchMe();

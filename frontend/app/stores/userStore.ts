@@ -1,7 +1,15 @@
 type Animal = {
   id: number;
   name: string;
-  image: string;
+  image: string | undefined;
+};
+
+type ApiAnimal = {
+  id: number;
+  name: string;
+  profile_picture_url?: string | null;
+  profile_picture?: string | null;
+  image?: string | null;
 };
 
 interface MeResponse {
@@ -24,14 +32,10 @@ export const useUserStore = defineStore("user", () => {
   const notificationsPush = ref(true);
   const nightMode = ref(false);
   const twoFactorEnabled = ref(false);
+  const animals = ref<Animal[]>([]);
 
-  const animals = ref<Animal[]>([
-    // {
-    //   id: 1,
-    //   name: "Scooby",
-    //   image: "/scooby.png",
-    // },
-  ]);
+  const isLoading = ref(false);
+  const errorMessage = ref("");
 
   const fullName = computed(() => {
     return `${firstName.value} ${lastName.value}`;
@@ -110,6 +114,29 @@ export const useUserStore = defineStore("user", () => {
     isReady.value = true;
   };
 
+  const fetchAnimals = async () => {
+    if (!id.value) return;
+    const { apiFetch } = useApi();
+    const config = useRuntimeConfig();
+    const baseUrl = config.public.apiBase.replace(/\/api$/, "");
+
+    isLoading.value = true;
+    try {
+      const result = await apiFetch<ApiAnimal[]>(`/animals/user/${id.value}`);
+      animals.value = result.map((animal: ApiAnimal) => {
+        const path = animal.profile_picture || animal.profile_picture_url || animal.image || null;
+        const image = path
+          ? path.startsWith("http") ? path : `${baseUrl}${path}`
+          : undefined;
+        return { id: animal.id, name: animal.name, image };
+      });
+    } catch (error) {
+      errorMessage.value = error instanceof Error ? error.message : "Erreur lors du chargement des animaux";
+    } finally {
+      isLoading.value = false;
+    }
+  };
+
   const reset = () => {
     isReady.value = false;
     id.value = null;
@@ -134,11 +161,14 @@ export const useUserStore = defineStore("user", () => {
     nightMode,
     twoFactorEnabled,
     animals,
+    isLoading,
+    errorMessage,
     fullName,
     avatarUrl,
     updateProfile,
     completeOnboarding,
     fetchMe,
+    fetchAnimals,
     reset,
   };
 });

@@ -7,6 +7,7 @@ defineProps({
   },
   type: {
     type: String as () => "button" | "submit" | "reset",
+    validator: (value: string) => ["button", "submit", "reset"].includes(value),
     default: "button",
   },
 });

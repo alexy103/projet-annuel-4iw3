@@ -20,6 +20,10 @@ defineProps({
     default: false,
   },
 });
+
+const emit = defineEmits<{
+  actionClick: [];
+}>();
 </script>
 
 <template>
@@ -45,7 +49,7 @@ defineProps({
         </BaseButton>
       </NuxtLink>
 
-      <BaseButton v-else>
+      <BaseButton v-else @click="emit('actionClick')">
         <Icon
           v-if="plus"
           name="material-symbols:add-rounded"

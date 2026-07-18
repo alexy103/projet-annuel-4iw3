@@ -102,9 +102,9 @@ const submitTwoFactor = async () => {
           <BaseButton>Créer un compte</BaseButton>
         </NuxtLink>
         <NuxtLink to="/forgot-password">
-          <BaseButton color="blue" class="shrink-0"
-            >Mot de passe oublié</BaseButton
-          >
+          <BaseButton color="blue" class="shrink-0">
+            Mot de passe oublié
+          </BaseButton>
         </NuxtLink>
       </div>
     </div>
