@@ -65,8 +65,18 @@ const ClinicBaseSchema = zod
   })
   .strict();
 
+export const CLINIC_STATUSES = ["pending", "approved", "rejected"] as const;
+
+export const ClinicStatusSchema = zod.enum(CLINIC_STATUSES).openapi({
+  description: "Clinic account status",
+  example: "approved",
+});
+
 export const CreateClinicPayloadSchema = ClinicBaseSchema;
 registry.register("CreateClinicPayload", CreateClinicPayloadSchema);
+
+export const RegisterClinicPayloadSchema = ClinicBaseSchema;
+registry.register("RegisterClinicPayload", RegisterClinicPayloadSchema);
 
 export const UpdateClinicPayloadSchema = ClinicBaseSchema.partial()
   .strict()
@@ -76,8 +86,17 @@ export const UpdateClinicPayloadSchema = ClinicBaseSchema.partial()
 
 registry.register("UpdateClinicPayload", UpdateClinicPayloadSchema);
 
+export const UpdateClinicStatusPayloadSchema = zod
+  .object({
+    status: ClinicStatusSchema,
+  })
+  .strict();
+
+registry.register("UpdateClinicStatusPayload", UpdateClinicStatusPayloadSchema);
+
 export const ClinicSchema = ClinicBaseSchema.extend({
   id: zod.number(),
+  status: ClinicStatusSchema,
   created_at: zod.date(),
   updated_at: zod.date(),
 });
@@ -85,5 +104,10 @@ export const ClinicSchema = ClinicBaseSchema.extend({
 registry.register("Clinic", ClinicSchema);
 
 export type Clinic = zod.infer<typeof ClinicSchema>;
+export type ClinicStatus = zod.infer<typeof ClinicStatusSchema>;
 export type CreateClinicPayload = zod.infer<typeof CreateClinicPayloadSchema>;
+export type RegisterClinicPayload = zod.infer<typeof RegisterClinicPayloadSchema>;
 export type UpdateClinicPayload = zod.infer<typeof UpdateClinicPayloadSchema>;
+export type UpdateClinicStatusPayload = zod.infer<
+  typeof UpdateClinicStatusPayloadSchema
+>;
