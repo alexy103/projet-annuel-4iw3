@@ -12,7 +12,9 @@ import {
 import {
   ClinicSchema,
   CreateClinicPayloadSchema, SpecieSchema,
+  RegisterClinicPayloadSchema,
   UpdateClinicPayloadSchema,
+  UpdateClinicStatusPayloadSchema,
 } from "../schemas";
 
 registry.registerPath({
@@ -109,6 +111,52 @@ registry.registerPath({
     403: ForbiddenResponse,
     404: NotFoundResponse,
     409: ConflictResponse,
+    500: ServerErrorResponse,
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  security: [{ ApiKeyAuth: [] }],
+  path: "/clinics/register",
+  tags: ["Clinics"],
+  summary: "Self-register a clinic (pending approval)",
+  request: {
+    body: {
+      content: {
+        "application/json": { schema: RegisterClinicPayloadSchema },
+      },
+    },
+  },
+  responses: {
+    201: JsonResponse(ClinicSchema, "Clinic registration submitted"),
+    400: BadRequest,
+    401: UnauthorizedResponse,
+    409: ConflictResponse,
+    500: ServerErrorResponse,
+  },
+});
+
+registry.registerPath({
+  method: "patch",
+  security: [{ ApiKeyAuth: [] }, { BearerAuth: [] }],
+  path: "/clinics/{clinicId}/status",
+  tags: ["Clinics"],
+  summary: "Update clinic status (approve/reject)",
+  request: {
+    params: zod.object({ clinicId: zod.string() }),
+    body: {
+      content: {
+        "application/json": { schema: UpdateClinicStatusPayloadSchema },
+      },
+    },
+  },
+  responses: {
+    200: JsonResponse(ClinicSchema, "Clinic status updated"),
+    400: BadRequest,
+    401: UnauthorizedResponse,
+    403: ForbiddenResponse,
+    404: NotFoundResponse,
     500: ServerErrorResponse,
   },
 });
