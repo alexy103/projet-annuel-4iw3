@@ -26,6 +26,15 @@ export default defineNuxtRouteMiddleware((to) => {
     return navigateTo("/");
   }
 
+  if (accessToken && to.path === "/") {
+    if (roleId === ROLE_ADMIN) {
+      return navigateTo("/admin");
+    }
+    if (roleId === ROLE_CLINIC) {
+      return navigateTo("/clinic");
+    }
+  }
+
   if (to.path.startsWith("/admin") && roleId !== ROLE_ADMIN) {
     return navigateTo("/");
   }
