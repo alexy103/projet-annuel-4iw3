@@ -18,11 +18,15 @@ const isRendered = ref(props.modelValue);
 const isVisible = ref(props.modelValue);
 
 const lockScroll = () => {
-  document.body.style.overflow = "hidden";
+  if (import.meta.client) {
+    document.body.style.overflow = "hidden";
+  }
 };
 
 const unlockScroll = () => {
-  document.body.style.overflow = "";
+  if (import.meta.client) {
+    document.body.style.overflow = "";
+  }
 };
 
 watch(

@@ -110,7 +110,7 @@ const canSubmitAppointment = computed(() => {
 });
 
 const profileLink = computed(() => {
-  return userStore.userId ? `/profile/${userStore.userId}` : "";
+  return userStore.id ? `/profile/${userStore.id}` : "";
 });
 
 const getAuthHeaders = () => {
@@ -434,11 +434,11 @@ const createAppointment = async () => {
     return;
   }
 
-  if (!userStore.userId) {
-    userStore.loadUserFromStorage();
+  if (!userStore.id) {
+    await userStore.fetchMe();
   }
 
-  if (!userStore.userId) {
+  if (!userStore.id) {
     appointmentErrorMessage.value =
       "Utilisateur non trouvé. Reconnectez-vous puis réessayez.";
     return;
@@ -457,7 +457,7 @@ const createAppointment = async () => {
         time: appointmentTime.value,
         reason_id: selectedReason.id,
         is_completed: false,
-        user_id: userStore.userId,
+        user_id: userStore.id,
         animal_id: selectedAnimal.id,
         clinic_id: selectedClinic.id,
         remark: appointmentRemark.value.trim() || undefined,
@@ -484,7 +484,9 @@ const createAppointment = async () => {
 };
 
 onMounted(async () => {
-  userStore.loadUserFromStorage();
+  if (!userStore.id) {
+    await userStore.fetchMe();
+  }
 
   await Promise.all([userStore.fetchAnimals(), loadAppointmentFormData()]);
 
