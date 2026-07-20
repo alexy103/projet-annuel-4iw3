@@ -82,9 +82,15 @@ const formatTimeFr = (rawTime: string): string => {
 
 const upcomingAppointments = computed<UpcomingAppointmentCard[]>(() => {
   const now = new Date();
-  const clinicsById = new Map(clinics.value.map((clinic) => [clinic.id, clinic]));
-  const reasonsById = new Map(appointmentReasons.value.map((reason) => [reason.id, reason]));
-  const animalsById = new Map(userStore.animals.map((animal) => [animal.id, animal]));
+  const clinicsById = new Map(
+    clinics.value.map((clinic) => [clinic.id, clinic]),
+  );
+  const reasonsById = new Map(
+    appointmentReasons.value.map((reason) => [reason.id, reason]),
+  );
+  const animalsById = new Map(
+    userStore.animals.map((animal) => [animal.id, animal]),
+  );
 
   return appointments.value
     .filter((appointment) => !appointment.is_completed)
@@ -97,13 +103,27 @@ const upcomingAppointments = computed<UpcomingAppointmentCard[]>(() => {
     .slice(0, 10)
     .map(({ appointment, startsAt }) => ({
       id: appointment.id,
-      animal: animalsById.get(appointment.animal_id)?.name ?? `Animal #${appointment.animal_id}`,
-      type: reasonsById.get(appointment.reason_id)?.label ?? `Motif #${appointment.reason_id}`,
+      animal:
+        animalsById.get(appointment.animal_id)?.name ??
+        `Animal #${appointment.animal_id}`,
+      type:
+        reasonsById.get(appointment.reason_id)?.label ??
+        `Motif #${appointment.reason_id}`,
       date: formatDateFr(appointment.date),
       time: formatTimeFr(appointment.time),
-      clinic: clinicsById.get(appointment.clinic_id)?.name ?? `Clinique #${appointment.clinic_id}`,
+      clinic:
+        clinicsById.get(appointment.clinic_id)?.name ??
+        `Clinique #${appointment.clinic_id}`,
       isToday: isSameDay(startsAt, now),
     }));
+});
+
+const showUpcomingSection = computed(() => {
+  return (
+    isLoadingAppointments.value ||
+    appointmentsErrorMessage.value.length > 0 ||
+    upcomingAppointments.value.length > 0
+  );
 });
 
 const fetchAppointmentsData = async () => {
@@ -111,17 +131,20 @@ const fetchAppointmentsData = async () => {
   isLoadingAppointments.value = true;
   try {
     const { apiFetch } = useApi();
-    const [appointmentsResult, clinicsResult, reasonsResult] = await Promise.all([
-      apiFetch<ApiAppointment[]>("/appointments"),
-      apiFetch<ApiClinic[]>("/clinics"),
-      apiFetch<ApiAppointmentReason[]>("/appointment-reasons"),
-    ]);
+    const [appointmentsResult, clinicsResult, reasonsResult] =
+      await Promise.all([
+        apiFetch<ApiAppointment[]>("/appointments"),
+        apiFetch<ApiClinic[]>("/clinics"),
+        apiFetch<ApiAppointmentReason[]>("/appointment-reasons"),
+      ]);
     appointments.value = appointmentsResult;
     clinics.value = clinicsResult;
     appointmentReasons.value = reasonsResult;
   } catch (error) {
     appointmentsErrorMessage.value =
-      error instanceof Error ? error.message : "Impossible de charger les rendez-vous";
+      error instanceof Error
+        ? error.message
+        : "Impossible de charger les rendez-vous";
   } finally {
     isLoadingAppointments.value = false;
   }
@@ -157,7 +180,8 @@ const completeOnboarding = async () => {
     });
     setPageLayout("default");
   } catch (error) {
-    onboardingError.value = error instanceof Error ? error.message : "Erreur lors de la sauvegarde";
+    onboardingError.value =
+      error instanceof Error ? error.message : "Erreur lors de la sauvegarde";
   } finally {
     isCompleting.value = false;
   }
@@ -187,7 +211,12 @@ const handleProfilePictureUpload = (event: Event) => {
       Bienvenue, {{ userStore.firstName }} !
     </h1>
 
-    <BaseSection title="À venir" action="Tout voir" link="/calendar">
+    <BaseSection
+      v-if="showUpcomingSection"
+      title="À venir"
+      action="Tout voir"
+      link="/calendar"
+    >
       <div class="-mx-4 flex gap-2 overflow-x-auto px-4">
         <div v-if="isLoadingAppointments" class="py-2 text-sm text-gray-600">
           Chargement des rendez-vous...
@@ -198,13 +227,6 @@ const handleProfilePictureUpload = (event: Event) => {
           class="py-2 text-sm text-red-600"
         >
           {{ appointmentsErrorMessage }}
-        </div>
-
-        <div
-          v-else-if="upcomingAppointments.length === 0"
-          class="py-2 text-sm text-gray-600"
-        >
-          Aucun rendez-vous à venir.
         </div>
 
         <Appointment
@@ -301,9 +323,15 @@ const handleProfilePictureUpload = (event: Event) => {
       <BaseToggle v-model="userStore.nightMode" />
     </div>
 
-    <p v-if="onboardingError" class="text-center text-sm text-red-500">{{ onboardingError }}</p>
+    <p v-if="onboardingError" class="text-center text-sm text-red-500">
+      {{ onboardingError }}
+    </p>
 
-    <BaseButton class="flex justify-center" :disabled="isCompleting" @click="completeOnboarding">
+    <BaseButton
+      class="flex justify-center"
+      :disabled="isCompleting"
+      @click="completeOnboarding"
+    >
       {{ isCompleting ? "Enregistrement..." : "Terminer" }}
     </BaseButton>
   </div>

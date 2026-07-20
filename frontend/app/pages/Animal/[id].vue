@@ -371,6 +371,14 @@ const upcomingAppointments = computed<UpcomingAppointmentCard[]>(() => {
     }));
 });
 
+const showUpcomingSection = computed(() => {
+  return (
+    isLoadingAppointments.value ||
+    appointmentsErrorMessage.value.length > 0 ||
+    upcomingAppointments.value.length > 0
+  );
+});
+
 const treatmentTypeOptions = computed(() => {
   return treatmentTypes.value.map((type) => ({
     value: String(type.id),
@@ -1083,7 +1091,12 @@ watch(showNewTreatment, (isOpen) => {
       </div>
     </figure>
 
-    <BaseSection title="À venir" action="Tout voir" link="/calendar">
+    <BaseSection
+      v-if="showUpcomingSection"
+      title="À venir"
+      action="Tout voir"
+      link="/calendar"
+    >
       <div class="-mx-4 flex gap-2 overflow-x-auto px-4">
         <div v-if="isLoadingAppointments" class="py-2 text-sm text-gray-600">
           Chargement des rendez-vous...
@@ -1094,13 +1107,6 @@ watch(showNewTreatment, (isOpen) => {
           class="py-2 text-sm text-red-600"
         >
           {{ appointmentsErrorMessage }}
-        </div>
-
-        <div
-          v-else-if="upcomingAppointments.length === 0"
-          class="py-2 text-sm text-gray-600"
-        >
-          Aucun rendez-vous à venir pour cet animal.
         </div>
 
         <Appointment
