@@ -74,8 +74,9 @@ test.describe("Login flow", () => {
     );
 
     await page.goto("/login");
+    await page.waitForLoadState("networkidle");
     await page.getByLabel("Adresse e-mail").fill("alice@example.com");
-    await page.getByLabel("Mot de passe").fill("Password123!");
+    await page.getByLabel("Mot de passe", { exact: true }).fill("Password123!");
     await page.getByRole("button", { name: "Connexion" }).click();
 
     await page.waitForURL("/");
@@ -92,8 +93,9 @@ test.describe("Login flow", () => {
     );
 
     await page.goto("/login");
+    await page.waitForLoadState("networkidle");
     await page.getByLabel("Adresse e-mail").fill("alice@example.com");
-    await page.getByLabel("Mot de passe").fill("wrong-password");
+    await page.getByLabel("Mot de passe", { exact: true }).fill("wrong-password");
     await page.getByRole("button", { name: "Connexion" }).click();
 
     await expect(page.getByText("Email ou mot de passe incorrect")).toBeVisible();
@@ -111,8 +113,9 @@ test.describe("Login flow", () => {
     );
 
     await page.goto("/login");
+    await page.waitForLoadState("networkidle");
     await page.getByLabel("Adresse e-mail").fill("alice@example.com");
-    await page.getByLabel("Mot de passe").fill("Password123!");
+    await page.getByLabel("Mot de passe", { exact: true }).fill("Password123!");
     await page.getByRole("button", { name: "Connexion" }).click();
 
     await expect(page.getByText("Vérification en deux étapes")).toBeVisible();
@@ -132,8 +135,9 @@ test.describe("Login flow", () => {
     );
 
     await page.goto("/login");
+    await page.waitForLoadState("networkidle");
     await page.getByLabel("Adresse e-mail").fill("alice@example.com");
-    await page.getByLabel("Mot de passe").fill("Password123!");
+    await page.getByLabel("Mot de passe", { exact: true }).fill("Password123!");
     await page.getByRole("button", { name: "Connexion" }).click();
 
     await expect(page.getByText("Vérification en deux étapes")).toBeVisible();
@@ -160,8 +164,9 @@ test.describe("Login flow", () => {
     );
 
     await page.goto("/login");
+    await page.waitForLoadState("networkidle");
     await page.getByLabel("Adresse e-mail").fill("alice@example.com");
-    await page.getByLabel("Mot de passe").fill("Password123!");
+    await page.getByLabel("Mot de passe", { exact: true }).fill("Password123!");
     await page.getByRole("button", { name: "Connexion" }).click();
 
     await expect(page.getByText("Vérification en deux étapes")).toBeVisible();
@@ -178,10 +183,11 @@ test.describe("Login flow", () => {
 test.describe("Register flow", () => {
   test("shows an error immediately when passwords do not match", async ({ page }) => {
     await page.goto("/register");
+    await page.waitForLoadState("networkidle");
     await page.getByLabel("Prénom").fill("Alice");
-    await page.getByLabel("Nom").fill("Dupont");
+    await page.getByLabel("Nom", { exact: true }).fill("Dupont");
     await page.getByLabel("Adresse e-mail").fill("alice@example.com");
-    await page.getByLabel("Mot de passe").fill("Password123!");
+    await page.getByLabel("Mot de passe", { exact: true }).fill("Password123!");
     await page.getByLabel("Confirmer le mot de passe").fill("DifferentPass!");
     await page.getByRole("button", { name: "Créer mon compte" }).click();
 
@@ -200,10 +206,11 @@ test.describe("Register flow", () => {
     );
 
     await page.goto("/register");
+    await page.waitForLoadState("networkidle");
     await page.getByLabel("Prénom").fill("Alice");
-    await page.getByLabel("Nom").fill("Dupont");
+    await page.getByLabel("Nom", { exact: true }).fill("Dupont");
     await page.getByLabel("Adresse e-mail").fill("alice@example.com");
-    await page.getByLabel("Mot de passe").fill("Password123!");
+    await page.getByLabel("Mot de passe", { exact: true }).fill("Password123!");
     await page.getByLabel("Confirmer le mot de passe").fill("Password123!");
     await page.getByRole("button", { name: "Créer mon compte" }).click();
 
@@ -229,10 +236,11 @@ test.describe("Register flow", () => {
     );
 
     await page.goto("/register");
+    await page.waitForLoadState("networkidle");
     await page.getByLabel("Prénom").fill("Alice");
-    await page.getByLabel("Nom").fill("Dupont");
+    await page.getByLabel("Nom", { exact: true }).fill("Dupont");
     await page.getByLabel("Adresse e-mail").fill("alice@example.com");
-    await page.getByLabel("Mot de passe").fill("Password123!");
+    await page.getByLabel("Mot de passe", { exact: true }).fill("Password123!");
     await page.getByLabel("Confirmer le mot de passe").fill("Password123!");
     await page.getByRole("button", { name: "Créer mon compte" }).click();
 
@@ -254,10 +262,11 @@ test.describe("Register flow", () => {
     );
 
     await page.goto("/register");
+    await page.waitForLoadState("networkidle");
     await page.getByLabel("Prénom").fill("Alice");
-    await page.getByLabel("Nom").fill("Dupont");
+    await page.getByLabel("Nom", { exact: true }).fill("Dupont");
     await page.getByLabel("Adresse e-mail").fill("existing@example.com");
-    await page.getByLabel("Mot de passe").fill("Password123!");
+    await page.getByLabel("Mot de passe", { exact: true }).fill("Password123!");
     await page.getByLabel("Confirmer le mot de passe").fill("Password123!");
     await page.getByRole("button", { name: "Créer mon compte" }).click();
 
@@ -284,13 +293,15 @@ test.describe("Logout flow", () => {
 
     // Login
     await page.goto("/login");
+    await page.waitForLoadState("networkidle");
     await page.getByLabel("Adresse e-mail").fill("alice@example.com");
-    await page.getByLabel("Mot de passe").fill("Password123!");
+    await page.getByLabel("Mot de passe", { exact: true }).fill("Password123!");
     await page.getByRole("button", { name: "Connexion" }).click();
     await page.waitForURL("/");
 
     // Navigate to profile page
     await page.goto(`/profile/${MOCK_USER.id}`);
+    await page.waitForLoadState("networkidle");
     await page.getByRole("button", { name: "Déconnexion" }).click();
 
     await page.waitForURL("/login");
