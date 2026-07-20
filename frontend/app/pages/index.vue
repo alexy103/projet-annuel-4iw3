@@ -264,7 +264,7 @@ const handleProfilePictureUpload = (event: Event) => {
 
   <div
     v-else-if="userStore.onboardingCompleted && userStore.animals.length === 0"
-    class="absolute top-1/2 left-1/2 min-w-90 -translate-1/2 space-y-4 text-center lg:space-y-8"
+    class="flex min-h-[70vh] flex-col items-center justify-center gap-4 text-center lg:gap-8"
   >
     <h2 class="text-xl font-bold">
       Il semble que vous n'ayez pas encore ajouté d'animal à votre compte...
