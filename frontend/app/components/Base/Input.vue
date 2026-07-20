@@ -17,15 +17,18 @@ const inputValue = computed({
   get: () => props.modelValue ?? props.value ?? "",
   set: (value: string) => emit("update:modelValue", value),
 });
+
+const inputId = useId();
 </script>
 
 <template>
   <div>
-    <label class="mb-1 block text-center text-sm" v-if="label">
+    <label :for="inputId" class="mb-1 block text-center text-sm" v-if="label">
       {{ label }}
     </label>
 
     <input
+      :id="inputId"
       v-model="inputValue"
       :placeholder="placeholder"
       :disabled="disabled"
