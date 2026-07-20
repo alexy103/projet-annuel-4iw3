@@ -535,7 +535,10 @@ watch([selectedClinicLabel, appointmentDate], async () => {
         </NuxtLink>
 
         <NuxtLink :to="profileLink">
-          <Icon name="solar:user-outline" class="size-8 text-black" />
+          <Icon
+            name="solar:user-outline"
+            class="size-8 cursor-pointer text-black"
+          />
         </NuxtLink>
 
         <Icon
