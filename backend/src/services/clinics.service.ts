@@ -4,14 +4,15 @@ import {
   clinicsRepository,
   veterinariansRepository
 } from "../repositories";
-import {Clinic, CreateClinicPayload, UpdateClinicPayload} from "../schemas";
+import {Clinic, ClinicStatus, CreateClinicPayload, RegisterClinicPayload, UpdateClinicPayload} from "../schemas";
 
 export const clinicService = {
-  async getAll(role: string, callerClinicId?: number): Promise<Clinic[]> {
+  async getAll(role: string, callerClinicId?: number, status?: ClinicStatus): Promise<Clinic[]> {
     if (role === "clinic") {
       const clinic = await clinicsRepository.findById(callerClinicId!);
       return clinic ? [clinic] : [];
     }
+    if (status) return clinicsRepository.findByStatus(status);
     return clinicsRepository.findAll();
   },
 
@@ -38,6 +39,20 @@ export const clinicService = {
     if(duplicate.length !== 0) throw new AppError("Clinic already exists", 404);
 
     return clinicsRepository.create(data);
+  },
+
+  async register(data: RegisterClinicPayload): Promise<Clinic> {
+    const duplicate : Clinic[] = await clinicsRepository.findByName(data.name);
+    if(duplicate.length !== 0) throw new AppError("Clinic already exists", 409);
+
+    return clinicsRepository.register(data);
+  },
+
+  async updateStatus(clinicId: number, status: ClinicStatus): Promise<Clinic> {
+    const existingClinic: Clinic = await clinicsRepository.findById(clinicId);
+    if (!existingClinic) throw new AppError("Clinic not found", 404);
+
+    return clinicsRepository.updateStatus(clinicId, status);
   },
 
   async update(clinicId: number, data: UpdateClinicPayload, role: string, callerClinicId?: number): Promise<Clinic> {
