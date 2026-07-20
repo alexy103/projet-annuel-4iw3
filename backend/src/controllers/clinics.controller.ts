@@ -1,13 +1,21 @@
 import { Request, Response } from "express";
 import ApiResponse from "../utils/api-responses.utils";
-import { Clinic } from "../schemas";
+import {
+    Clinic,
+    ClinicStatus,
+    RegisterClinicPayloadSchema,
+    UpdateClinicStatusPayloadSchema,
+} from "../schemas";
 import { clinicService } from "../services";
 import { AuthenticatedRequest } from "../types";
 
 export const getClinics = async (req: Request, res: Response) => {
     try {
         const { role, clinic_id } = (req as AuthenticatedRequest).user;
-        const clinics: Clinic[] = await clinicService.getAll(role, clinic_id);
+        const status: ClinicStatus | undefined = req.query.status
+            ? (String(req.query.status) as ClinicStatus)
+            : undefined;
+        const clinics: Clinic[] = await clinicService.getAll(role, clinic_id, status);
         return ApiResponse.success(res, clinics);
     } catch (error) {
         return ApiResponse.getError(res, error);
@@ -86,6 +94,39 @@ export const createClinic = async (req: Request, res: Response) => {
     try {
         const clinic: Clinic = await clinicService.create(req.body);
         return ApiResponse.success(res, clinic, 201);
+    } catch (error) {
+        return ApiResponse.getError(res, error);
+    }
+};
+
+export const registerClinic = async (req: Request, res: Response) => {
+    try {
+        const parsed = RegisterClinicPayloadSchema.safeParse(req.body);
+        if (!parsed.success) {
+            return ApiResponse.badRequest(res, parsed.error.issues[0]?.message ?? "Invalid payload");
+        }
+
+        const clinic: Clinic = await clinicService.register(parsed.data);
+        return ApiResponse.success(res, clinic, 201);
+    } catch (error) {
+        return ApiResponse.getError(res, error);
+    }
+};
+
+export const updateClinicStatus = async (req: Request, res: Response) => {
+    try {
+        const clinicId: string | undefined = req.params.clinicId;
+        if (clinicId === undefined || clinicId === null) {
+            return ApiResponse.badRequest(res, "Clinic ID is required");
+        }
+
+        const parsed = UpdateClinicStatusPayloadSchema.safeParse(req.body);
+        if (!parsed.success) {
+            return ApiResponse.badRequest(res, parsed.error.issues[0]?.message ?? "Invalid payload");
+        }
+
+        const clinic: Clinic = await clinicService.updateStatus(Number(clinicId), parsed.data.status);
+        return ApiResponse.success(res, clinic);
     } catch (error) {
         return ApiResponse.getError(res, error);
     }
