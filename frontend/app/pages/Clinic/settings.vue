@@ -1,33 +1,66 @@
 <script setup lang="ts">
+import type { Clinic } from "~/types/clinic";
+
 definePageMeta({
   layout: "default",
 });
 
-const clinic = ref({
-  name: "Clinique Paul Picquet",
-  address: "12 rue de la Paix",
-  city: "Paris",
-  phone: "01 23 45 67 89",
-  email: "contact@paulpicquet.fr",
-  description: "Clinique vétérinaire spécialisée en médecine générale et chirurgie.",
+const { fetchClinics, updateClinic } = useClinics();
+
+const clinicId = ref<number | null>(null);
+const form = ref({
+  name: "",
+  address: "",
+  city: "",
+  postcode: "",
+  phone_number: "",
 });
 
-const schedules = ref([
-  { day: "Lundi", open: true, start: "09:00", end: "19:00" },
-  { day: "Mardi", open: true, start: "09:00", end: "19:00" },
-  { day: "Mercredi", open: true, start: "09:00", end: "19:00" },
-  { day: "Jeudi", open: true, start: "09:00", end: "19:00" },
-  { day: "Vendredi", open: true, start: "09:00", end: "18:00" },
-  { day: "Samedi", open: true, start: "10:00", end: "16:00" },
-  { day: "Dimanche", open: false, start: "09:00", end: "12:00" },
-]);
-
+const isLoading = ref(false);
+const isSaving = ref(false);
 const saved = ref(false);
+const errorMessage = ref("");
 
-const save = () => {
-  saved.value = true;
-  setTimeout(() => (saved.value = false), 2500);
+const loadClinic = async () => {
+  isLoading.value = true;
+  errorMessage.value = "";
+  try {
+    const clinics = await fetchClinics();
+    const clinic: Clinic | undefined = clinics[0];
+    if (!clinic) return;
+    clinicId.value = clinic.id;
+    form.value = {
+      name: clinic.name,
+      address: clinic.address,
+      city: clinic.city,
+      postcode: clinic.postcode,
+      phone_number: clinic.phone_number,
+    };
+  } catch (error) {
+    errorMessage.value =
+      error instanceof Error ? error.message : "Impossible de charger la clinique";
+  } finally {
+    isLoading.value = false;
+  }
 };
+
+const save = async () => {
+  if (!clinicId.value) return;
+  errorMessage.value = "";
+  isSaving.value = true;
+  try {
+    await updateClinic(clinicId.value, { ...form.value });
+    saved.value = true;
+    setTimeout(() => (saved.value = false), 2500);
+  } catch (error) {
+    errorMessage.value =
+      error instanceof Error ? error.message : "Enregistrement impossible";
+  } finally {
+    isSaving.value = false;
+  }
+};
+
+onMounted(loadClinic);
 </script>
 
 <template>
@@ -39,14 +72,18 @@ const save = () => {
       <h1 class="text-2xl font-bold">Paramètres de la clinique</h1>
     </div>
 
-    <div class="space-y-4">
+    <p v-if="isLoading" class="text-center text-sm text-gray-400">
+      Chargement...
+    </p>
+
+    <div v-else class="space-y-4">
       <h2 class="text-lg font-bold">Informations générales</h2>
 
       <div class="space-y-3">
         <div class="space-y-1">
           <label class="text-sm text-gray-500">Nom de la clinique</label>
           <input
-            v-model="clinic.name"
+            v-model="form.name"
             type="text"
             class="w-full rounded-full border border-gray-300 px-4 py-2 text-sm outline-none focus:border-[#15D98B]"
           />
@@ -54,7 +91,7 @@ const save = () => {
         <div class="space-y-1">
           <label class="text-sm text-gray-500">Adresse</label>
           <input
-            v-model="clinic.address"
+            v-model="form.address"
             type="text"
             class="w-full rounded-full border border-gray-300 px-4 py-2 text-sm outline-none focus:border-[#15D98B]"
           />
@@ -62,7 +99,15 @@ const save = () => {
         <div class="space-y-1">
           <label class="text-sm text-gray-500">Ville</label>
           <input
-            v-model="clinic.city"
+            v-model="form.city"
+            type="text"
+            class="w-full rounded-full border border-gray-300 px-4 py-2 text-sm outline-none focus:border-[#15D98B]"
+          />
+        </div>
+        <div class="space-y-1">
+          <label class="text-sm text-gray-500">Code postal</label>
+          <input
+            v-model="form.postcode"
             type="text"
             class="w-full rounded-full border border-gray-300 px-4 py-2 text-sm outline-none focus:border-[#15D98B]"
           />
@@ -70,71 +115,24 @@ const save = () => {
         <div class="space-y-1">
           <label class="text-sm text-gray-500">Téléphone</label>
           <input
-            v-model="clinic.phone"
+            v-model="form.phone_number"
             type="tel"
             class="w-full rounded-full border border-gray-300 px-4 py-2 text-sm outline-none focus:border-[#15D98B]"
           />
         </div>
-        <div class="space-y-1">
-          <label class="text-sm text-gray-500">Email</label>
-          <input
-            v-model="clinic.email"
-            type="email"
-            class="w-full rounded-full border border-gray-300 px-4 py-2 text-sm outline-none focus:border-[#15D98B]"
-          />
-        </div>
-        <div class="space-y-1">
-          <label class="text-sm text-gray-500">Description</label>
-          <textarea
-            v-model="clinic.description"
-            rows="3"
-            class="w-full rounded-2xl border border-gray-300 px-4 py-2 text-sm outline-none resize-none focus:border-[#15D98B]"
-          />
-        </div>
       </div>
     </div>
 
-    <div class="space-y-4">
-      <h2 class="text-lg font-bold">Horaires d'ouverture</h2>
-
-      <div class="space-y-3">
-        <div
-          v-for="schedule in schedules"
-          :key="schedule.day"
-          class="flex items-center gap-3"
-        >
-          <div class="w-24 text-sm font-bold">{{ schedule.day }}</div>
-
-          <button
-            class="rounded-full px-3 py-1 text-xs font-bold transition-colors duration-200"
-            :class="schedule.open ? 'bg-[#15D98B] text-white' : 'bg-gray-200 text-gray-500'"
-            @click="schedule.open = !schedule.open"
-          >
-            {{ schedule.open ? 'Ouvert' : 'Fermé' }}
-          </button>
-
-          <template v-if="schedule.open">
-            <input
-              v-model="schedule.start"
-              type="time"
-              class="rounded-full border border-gray-300 px-3 py-1 text-sm outline-none focus:border-[#15D98B]"
-            />
-            <span class="text-sm text-gray-400">→</span>
-            <input
-              v-model="schedule.end"
-              type="time"
-              class="rounded-full border border-gray-300 px-3 py-1 text-sm outline-none focus:border-[#15D98B]"
-            />
-          </template>
-        </div>
-      </div>
-    </div>
+    <p v-if="errorMessage" class="text-center text-sm text-red-500">
+      {{ errorMessage }}
+    </p>
 
     <button
-      class="w-full rounded-full bg-[#15D98B] py-3 font-bold text-white transition-transform duration-200 hover:scale-[1.02]"
+      :disabled="isSaving || isLoading"
+      class="w-full rounded-full bg-[#15D98B] py-3 font-bold text-white transition-transform duration-200 hover:scale-[1.02] disabled:opacity-50"
       @click="save"
     >
-      {{ saved ? '✓ Enregistré !' : 'Enregistrer les modifications' }}
+      {{ saved ? '✓ Enregistré !' : isSaving ? 'Enregistrement...' : 'Enregistrer les modifications' }}
     </button>
   </div>
 </template>

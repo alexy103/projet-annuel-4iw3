@@ -6,10 +6,14 @@ import {
   getClinicById,
   getClinics,
   getClinicsByCriteria, getClinicsByName,
+  registerClinic,
   updateClinic,
+  updateClinicStatus,
 } from "../controllers";
 
 export const clinicsRouter: Router = Router();
+
+clinicsRouter.post("/register", requireApiKey, registerClinic);
 
 clinicsRouter.get("/", requireApiKey, requireAuth(), getClinics);
 
@@ -20,6 +24,13 @@ clinicsRouter.get("/search-name", requireApiKey, requireAuth(), getClinicsByName
 clinicsRouter.get("/:clinicId", requireApiKey, requireAuth(), getClinicById);
 
 clinicsRouter.post("/", requireApiKey, requireAuth("admin"), createClinic);
+
+clinicsRouter.patch(
+  "/:clinicId/status",
+  requireApiKey,
+  requireAuth("admin"),
+  updateClinicStatus,
+);
 
 clinicsRouter.put(
   "/:clinicId",
