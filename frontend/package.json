@@ -33,6 +33,7 @@
     "@iconify-json/uil": "^1.2.3",
     "@nuxt/test-utils": "^4.0.3",
     "@playwright/test": "^1.61.1",
+    "@vue/test-utils": "^2.4.6",
     "happy-dom": "^20.10.6",
     "nuxt-qrcode": "^0.4.10",
     "playwright": "^1.61.1",
