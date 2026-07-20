@@ -1,46 +1,89 @@
 <script setup lang="ts">
+import type { Clinic } from "~/types/clinic";
+import type { Appointment, AppointmentReason } from "~/types/appointment";
+
 definePageMeta({
   layout: "default",
 });
 
-const activeTab = ref<"upcoming" | "ongoing" | "past">("upcoming");
+const { apiFetch } = useApi();
+const { fetchClinics } = useClinics();
+
+const clinicId = ref<number | null>(null);
+const appointments = ref<Appointment[]>([]);
+const reasons = ref<AppointmentReason[]>([]);
+const isLoading = ref(false);
+const errorMessage = ref("");
+const updatingId = ref<number | null>(null);
+
+const activeTab = ref<"upcoming" | "past">("upcoming");
 const selectedAppointment = ref<number | null>(null);
 
-const veterinarians = [
-  { id: 1, name: "Dr Dupont" },
-  { id: 2, name: "Dr Martin" },
-  { id: 3, name: "Dr Bernard" },
+const tabs = [
+  { key: "upcoming", label: "À venir" },
+  { key: "past", label: "Terminés" },
 ];
 
-const appointments = ref([
-  { id: 1, date: "2026-05-20", time: "09h00", owner: "Jean Dupuis", animal: "Rex", reason: "Vaccination", status: "upcoming", assignedVet: null, notes: "" },
-  { id: 2, date: "2026-05-20", time: "10h00", owner: "Marie Curie", animal: "Luna", reason: "Contrôle annuel", status: "upcoming", assignedVet: null, notes: "" },
-  { id: 3, date: "2026-05-17", time: "14h00", owner: "Paul Martin", animal: "Milo", reason: "Consultation", status: "ongoing", assignedVet: null, notes: "" },
-  { id: 4, date: "2026-05-10", time: "11h00", owner: "Sophie Bernard", animal: "Nala", reason: "Chirurgie", status: "past", assignedVet: "Dr Dupont", notes: "Opération réussie, repos 2 semaines." },
-  { id: 5, date: "2026-05-08", time: "15h30", owner: "Lucas Petit", animal: "Oscar", reason: "Vaccination", status: "past", assignedVet: "Dr Martin", notes: "Rappel dans 1 an." },
-]);
+const getDatePart = (rawDate: string) =>
+  rawDate.includes("T") ? (rawDate.split("T")[0] ?? rawDate) : rawDate;
 
-const filtered = computed(() => appointments.value.filter(a => a.status === activeTab.value));
+const reasonLabel = (reasonId: number) =>
+  reasons.value.find((reason) => reason.id === reasonId)?.label ?? "Consultation";
+
+const filtered = computed(() => {
+  const sorted = [...appointments.value].sort((a, b) => {
+    const dateCompare = getDatePart(a.date).localeCompare(getDatePart(b.date));
+    return dateCompare !== 0 ? dateCompare : a.time.localeCompare(b.time);
+  });
+  return activeTab.value === "upcoming"
+    ? sorted.filter((appointment) => !appointment.is_completed)
+    : sorted.filter((appointment) => appointment.is_completed);
+});
+
+const loadAppointments = async () => {
+  isLoading.value = true;
+  errorMessage.value = "";
+  try {
+    const clinics = await fetchClinics();
+    const clinic: Clinic | undefined = clinics[0];
+    if (!clinic) return;
+    clinicId.value = clinic.id;
+
+    const [clinicAppointments, appointmentReasons] = await Promise.all([
+      apiFetch<Appointment[]>(`/appointments/clinic/${clinic.id}`),
+      apiFetch<AppointmentReason[]>("/appointment-reasons"),
+    ]);
+    appointments.value = clinicAppointments;
+    reasons.value = appointmentReasons;
+  } catch (error) {
+    errorMessage.value =
+      error instanceof Error ? error.message : "Impossible de charger les rendez-vous";
+  } finally {
+    isLoading.value = false;
+  }
+};
 
 const toggleDetail = (id: number) => {
   selectedAppointment.value = selectedAppointment.value === id ? null : id;
 };
 
-const startAppointment = (id: number) => {
-  const appt = appointments.value.find(a => a.id === id);
-  if (appt) appt.status = "ongoing";
+const completeAppointment = async (appointment: Appointment) => {
+  updatingId.value = appointment.id;
+  try {
+    const updated = await apiFetch<Appointment>(
+      `/appointments/${appointment.id}/completed`,
+      { method: "PATCH", body: { isCompleted: true } },
+    );
+    appointment.is_completed = updated.is_completed;
+  } catch (error) {
+    errorMessage.value =
+      error instanceof Error ? error.message : "Mise à jour impossible";
+  } finally {
+    updatingId.value = null;
+  }
 };
 
-const closeAppointment = (id: number) => {
-  const appt = appointments.value.find(a => a.id === id);
-  if (appt) appt.status = "past";
-};
-
-const tabs = [
-  { key: "upcoming", label: "À venir" },
-  { key: "ongoing", label: "En cours" },
-  { key: "past", label: "Passés" },
-];
+onMounted(loadAppointments);
 </script>
 
 <template>
@@ -58,13 +101,18 @@ const tabs = [
         :key="tab.key"
         class="rounded-full px-4 py-2 text-sm font-bold transition-colors duration-200"
         :class="activeTab === tab.key ? 'bg-[#15D98B] text-white' : 'bg-gray-200 text-black'"
-        @click="activeTab = tab.key as 'upcoming' | 'ongoing' | 'past'"
+        @click="activeTab = tab.key as 'upcoming' | 'past'"
       >
         {{ tab.label }}
       </button>
     </div>
 
-    <div class="space-y-4">
+    <p v-if="errorMessage" class="text-sm text-red-500">{{ errorMessage }}</p>
+    <p v-if="isLoading" class="text-center text-sm text-gray-400">
+      Chargement...
+    </p>
+
+    <div v-else class="space-y-4">
       <div
         v-for="appt in filtered"
         :key="appt.id"
@@ -75,20 +123,17 @@ const tabs = [
           @click="toggleDetail(appt.id)"
         >
           <div>
-            <p class="font-bold text-lg">{{ appt.owner }}</p>
-            <p class="text-sm text-gray-500">{{ appt.animal }} — {{ appt.reason }}</p>
-            <p class="text-sm text-gray-400">{{ appt.date }} à {{ appt.time }}</p>
+            <p class="font-bold text-lg">{{ reasonLabel(appt.reason_id) }}</p>
+            <p class="text-sm text-gray-400">
+              {{ getDatePart(appt.date) }} à {{ appt.time.slice(0, 5) }}
+            </p>
           </div>
           <div class="flex flex-col items-end gap-2">
             <span
               class="rounded-full px-3 py-1 text-xs font-bold text-white"
-              :class="{
-                'bg-[#31C6D0]': appt.status === 'upcoming',
-                'bg-[#15D98B]': appt.status === 'ongoing',
-                'bg-gray-400': appt.status === 'past',
-              }"
+              :class="appt.is_completed ? 'bg-gray-400' : 'bg-[#31C6D0]'"
             >
-              {{ appt.status === 'upcoming' ? 'À venir' : appt.status === 'ongoing' ? 'En cours' : 'Terminé' }}
+              {{ appt.is_completed ? 'Terminé' : 'À venir' }}
             </span>
             <Icon
               :name="selectedAppointment === appt.id ? 'material-symbols:keyboard-arrow-up' : 'material-symbols:keyboard-arrow-down'"
@@ -97,65 +142,33 @@ const tabs = [
           </div>
         </div>
 
-        <div v-if="selectedAppointment === appt.id" class="border-t border-gray-100 px-4 pb-4 pt-3 space-y-3">
+        <div
+          v-if="selectedAppointment === appt.id"
+          class="border-t border-gray-100 px-4 pb-4 pt-3 space-y-3"
+        >
           <div class="grid grid-cols-2 gap-2 text-sm">
             <div>
-              <p class="text-gray-400">Propriétaire</p>
-              <p class="font-bold">{{ appt.owner }}</p>
-            </div>
-            <div>
-              <p class="text-gray-400">Animal</p>
-              <p class="font-bold">{{ appt.animal }}</p>
-            </div>
-            <div>
               <p class="text-gray-400">Motif</p>
-              <p class="font-bold">{{ appt.reason }}</p>
+              <p class="font-bold">{{ reasonLabel(appt.reason_id) }}</p>
             </div>
             <div>
               <p class="text-gray-400">Date & heure</p>
-              <p class="font-bold">{{ appt.date }} à {{ appt.time }}</p>
+              <p class="font-bold">
+                {{ getDatePart(appt.date) }} à {{ appt.time.slice(0, 5) }}
+              </p>
             </div>
           </div>
 
-          <div v-if="appt.status === 'ongoing'" class="space-y-2">
-            <p class="text-sm font-bold">Médecin assigné</p>
-            <select
-              v-model="appt.assignedVet"
-              class="w-full rounded-full border border-gray-300 px-4 py-2 text-sm outline-none"
-            >
-              <option value="" disabled>Choisir un médecin</option>
-              <option v-for="vet in veterinarians" :key="vet.id" :value="vet.name">
-                {{ vet.name }}
-              </option>
-            </select>
-            <p class="text-sm font-bold">Notes / compte-rendu</p>
-            <textarea
-              v-model="appt.notes"
-              placeholder="Ajouter des notes..."
-              class="w-full rounded-2xl border border-gray-300 px-4 py-2 text-sm outline-none resize-none"
-              rows="3"
-            />
+          <div v-if="appt.remark">
+            <p class="text-sm text-gray-400">Remarque</p>
+            <p class="text-sm font-bold">{{ appt.remark }}</p>
           </div>
 
-          <div v-if="appt.status === 'past'" class="space-y-1 text-sm">
-            <p class="text-gray-400">Suivi par</p>
-            <p class="font-bold">{{ appt.assignedVet ?? 'Non renseigné' }}</p>
-            <p class="text-gray-400 mt-2">Notes</p>
-            <p class="font-bold">{{ appt.notes || 'Aucune note.' }}</p>
-          </div>
-
-          <div class="flex gap-2 pt-1">
+          <div v-if="!appt.is_completed" class="pt-1">
             <button
-              v-if="appt.status === 'upcoming'"
-              class="rounded-full bg-[#15D98B] px-4 py-2 text-sm font-bold text-white transition-transform duration-200 hover:scale-105"
-              @click="startAppointment(appt.id)"
-            >
-              Commencer
-            </button>
-            <button
-              v-if="appt.status === 'ongoing'"
-              class="rounded-full bg-red-500 px-4 py-2 text-sm font-bold text-white transition-transform duration-200 hover:scale-105"
-              @click="closeAppointment(appt.id)"
+              :disabled="updatingId === appt.id"
+              class="rounded-full bg-[#15D98B] px-4 py-2 text-sm font-bold text-white transition-transform duration-200 hover:scale-105 disabled:opacity-50"
+              @click="completeAppointment(appt)"
             >
               Clôturer
             </button>
@@ -163,7 +176,7 @@ const tabs = [
         </div>
       </div>
 
-      <p v-if="filtered.length === 0" class="text-center text-gray-400">
+      <p v-if="!isLoading && filtered.length === 0" class="text-center text-gray-400">
         Aucun rendez-vous dans cette catégorie.
       </p>
     </div>
