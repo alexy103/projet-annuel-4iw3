@@ -48,3 +48,32 @@ Le `client_id` est public (il apparaît dans l'URL d'autorisation GitHub), seul 
 2. Aller sur `http://localhost:3000/login` et cliquer sur **Continuer avec GitHub**.
 3. Après autorisation sur GitHub, tu es redirigé vers `/auth/github/callback` qui échange le code auprès du backend (`POST /api/auth/oauth/github`) et te connecte (ou crée le compte si c'est la première connexion avec cet e-mail GitHub).
 4. Si la double authentification (TOTP) est activée sur le compte, un code est demandé avant de finaliser la connexion.
+
+## Lancer les tests
+
+### Backend (Jest)
+
+```bash
+cd backend
+npm test              # tests unitaires + intégration
+npm run test:watch    # mode watch
+npm run test:coverage # avec couverture
+```
+
+### Frontend (Vitest)
+
+```bash
+cd frontend
+npm test        # tests unitaires (stores, composables)
+npm run test:watch
+```
+
+### Frontend (Playwright e2e)
+
+Nécessite le backend et le frontend lancés (`npm run dev` dans chaque dossier), Playwright démarre sinon automatiquement le serveur frontend si besoin.
+
+```bash
+cd frontend
+npx playwright install   # une seule fois, installe les navigateurs
+npm run test:e2e
+```
