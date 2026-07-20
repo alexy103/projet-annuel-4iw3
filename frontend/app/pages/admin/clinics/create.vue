@@ -45,7 +45,7 @@ const submitCreate = async () => {
       throw new Error("Rôle clinique introuvable");
     }
 
-    await apiFetch("/users", {
+    const user = await apiFetch<{ id: number }>("/users", {
       method: "POST",
       body: {
         first_name: firstName.value,
@@ -54,6 +54,11 @@ const submitCreate = async () => {
         role_id: clinicRole.id,
         clinic_id: clinic.id,
       },
+    });
+
+    await apiFetch(`/users/${user.id}/clinic`, {
+      method: "PATCH",
+      body: { clinic_id: clinic.id },
     });
 
     await router.push("/admin");
