@@ -420,7 +420,7 @@ const handleAddAnimal = async () => {
       </div>
 
       <div class="flex items-center justify-between">
-        <p>Poids</p>
+        <p>Poids (optionnel)</p>
         <div class="flex gap-2">
           <BaseInput v-model="weight" type="number" small />
           <span class="min-w-5">kg</span>
@@ -428,7 +428,7 @@ const handleAddAnimal = async () => {
       </div>
 
       <div class="flex items-center justify-between">
-        <p>Taille</p>
+        <p>Taille (optionnel)</p>
         <div class="flex gap-2">
           <BaseInput v-model="height" type="number" small />
           <span class="min-w-5">cm</span>
