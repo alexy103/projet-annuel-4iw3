@@ -9,6 +9,7 @@ export default defineNuxtRouteMiddleware((to) => {
     "/forgot-password",
     "/verify-code",
     "/reset-password",
+    "/auth/github/callback",
   ];
   const accessToken = localStorage.getItem("accessToken");
 
