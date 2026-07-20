@@ -1,12 +1,61 @@
 <script setup lang="ts">
+import type { Clinic } from "~/types/clinic";
+import type { Appointment, AppointmentReason } from "~/types/appointment";
+import type { Veterinarian } from "~/types/veterinarian";
+
 definePageMeta({
   layout: "default",
 });
 
-const stats = ref([
-  { label: "RDV aujourd'hui", value: 8, icon: "material-symbols:calendar-today" },
-  { label: "En cours", value: 2, icon: "material-symbols:pending-actions" },
-  { label: "Vétérinaires", value: 5, icon: "material-symbols:stethoscope" },
+const { apiFetch } = useApi();
+const { fetchClinics } = useClinics();
+const { fetchByClinic } = useVeterinarians();
+
+const clinic = ref<Clinic | null>(null);
+const appointments = ref<Appointment[]>([]);
+const veterinarians = ref<Veterinarian[]>([]);
+const reasons = ref<AppointmentReason[]>([]);
+const isLoading = ref(false);
+const errorMessage = ref("");
+
+const today = new Date().toISOString().slice(0, 10);
+
+const getDatePart = (rawDate: string) =>
+  rawDate.includes("T") ? (rawDate.split("T")[0] ?? rawDate) : rawDate;
+
+const reasonLabel = (reasonId: number) =>
+  reasons.value.find((reason) => reason.id === reasonId)?.label ?? "Consultation";
+
+const todayAppointments = computed(() =>
+  appointments.value
+    .filter((appointment) => getDatePart(appointment.date) === today)
+    .sort((a, b) => a.time.localeCompare(b.time)),
+);
+
+const upcomingCount = computed(
+  () =>
+    appointments.value.filter(
+      (appointment) =>
+        !appointment.is_completed && getDatePart(appointment.date) >= today,
+    ).length,
+);
+
+const stats = computed(() => [
+  {
+    label: "RDV aujourd'hui",
+    value: todayAppointments.value.length,
+    icon: "material-symbols:calendar-today",
+  },
+  {
+    label: "À venir",
+    value: upcomingCount.value,
+    icon: "material-symbols:pending-actions",
+  },
+  {
+    label: "Vétérinaires",
+    value: veterinarians.value.length,
+    icon: "material-symbols:stethoscope",
+  },
 ]);
 
 const quickLinks = [
@@ -33,19 +82,42 @@ const quickLinks = [
   },
 ];
 
-const upcomingAppointments = ref([
-  { id: 1, time: "09h00", owner: "Jean Dupuis", animal: "Rex", reason: "Vaccination" },
-  { id: 2, time: "10h00", owner: "Marie Curie", animal: "Luna", reason: "Contrôle annuel" },
-  { id: 3, time: "14h00", owner: "Paul Martin", animal: "Milo", reason: "Consultation" },
-]);
+const loadDashboard = async () => {
+  isLoading.value = true;
+  errorMessage.value = "";
+  try {
+    const clinics = await fetchClinics();
+    clinic.value = clinics[0] ?? null;
+
+    reasons.value = await apiFetch<AppointmentReason[]>("/appointment-reasons");
+
+    if (clinic.value) {
+      const [clinicAppointments, clinicVets] = await Promise.all([
+        apiFetch<Appointment[]>(`/appointments/clinic/${clinic.value.id}`),
+        fetchByClinic(clinic.value.id),
+      ]);
+      appointments.value = clinicAppointments;
+      veterinarians.value = clinicVets;
+    }
+  } catch (error) {
+    errorMessage.value =
+      error instanceof Error ? error.message : "Impossible de charger le tableau de bord";
+  } finally {
+    isLoading.value = false;
+  }
+};
+
+onMounted(loadDashboard);
 </script>
 
 <template>
   <div class="space-y-6">
     <div>
       <h1 class="text-2xl font-bold">Tableau de bord</h1>
-      <p class="text-sm text-gray-400">Clinique Paul Picquet</p>
+      <p class="text-sm text-gray-400">{{ clinic?.name ?? "Ma clinique" }}</p>
     </div>
+
+    <p v-if="errorMessage" class="text-sm text-red-500">{{ errorMessage }}</p>
 
     <div class="grid grid-cols-3 gap-3">
       <div
@@ -86,18 +158,27 @@ const upcomingAppointments = ref([
       </div>
       <div class="space-y-2">
         <div
-          v-for="appt in upcomingAppointments"
+          v-for="appt in todayAppointments"
           :key="appt.id"
           class="flex items-center gap-3 rounded-2xl border border-gray-100 bg-white p-3 shadow-sm"
         >
           <div class="flex size-10 shrink-0 items-center justify-center rounded-full bg-[#CCE8DD]">
-            <p class="text-xs font-bold text-[#15D98B]">{{ appt.time }}</p>
+            <p class="text-xs font-bold text-[#15D98B]">{{ appt.time.slice(0, 5) }}</p>
           </div>
           <div>
-            <p class="font-bold text-sm">{{ appt.owner }}</p>
-            <p class="text-xs text-gray-400">{{ appt.animal }} — {{ appt.reason }}</p>
+            <p class="font-bold text-sm">{{ reasonLabel(appt.reason_id) }}</p>
+            <p class="text-xs text-gray-400">
+              {{ appt.is_completed ? "Terminé" : "À traiter" }}
+            </p>
           </div>
         </div>
+
+        <p
+          v-if="!isLoading && todayAppointments.length === 0"
+          class="text-center text-sm text-gray-400"
+        >
+          Aucun rendez-vous aujourd'hui.
+        </p>
       </div>
     </div>
   </div>
