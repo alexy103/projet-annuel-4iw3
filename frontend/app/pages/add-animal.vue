@@ -158,6 +158,25 @@ const handleAddAnimal = async () => {
     return;
   }
 
+  const parsedWeight = weight.value ? Number(weight.value) : null;
+  const parsedHeight = height.value ? Number(height.value) : null;
+
+  if (
+    parsedWeight !== null &&
+    (!Number.isInteger(parsedWeight) || parsedWeight <= 0)
+  ) {
+    errorMessage.value = "Le poids doit etre un entier strictement positif";
+    return;
+  }
+
+  if (
+    parsedHeight !== null &&
+    (!Number.isInteger(parsedHeight) || parsedHeight <= 0)
+  ) {
+    errorMessage.value = "La taille doit etre un entier strictement positif";
+    return;
+  }
+
   isLoading.value = true;
 
   try {
@@ -191,6 +210,67 @@ const handleAddAnimal = async () => {
     }
 
     const animalId = createResult.data.id;
+
+    const measurementRequests: Promise<Response>[] = [];
+
+    if (parsedWeight !== null) {
+      measurementRequests.push(
+        fetch(`${config.public.apiUrl}/weight-records`, {
+          method: "POST",
+          headers: {
+            ...getAuthHeaders(),
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            date: adoptionDate.value,
+            weight: parsedWeight,
+            animal_id: animalId,
+          }),
+        }),
+      );
+    }
+
+    if (parsedHeight !== null) {
+      measurementRequests.push(
+        fetch(`${config.public.apiUrl}/height-records`, {
+          method: "POST",
+          headers: {
+            ...getAuthHeaders(),
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            date: adoptionDate.value,
+            height: parsedHeight,
+            animal_id: animalId,
+          }),
+        }),
+      );
+    }
+
+    if (measurementRequests.length > 0) {
+      const measurementResponses = await Promise.all(measurementRequests);
+      const measurementResults = await Promise.all(
+        measurementResponses.map(async (response) => {
+          const contentType = response.headers.get("content-type");
+          const body = contentType?.includes("application/json")
+            ? await response.json()
+            : null;
+
+          return { response, body };
+        }),
+      );
+
+      const failedMeasurement = measurementResults.find(
+        ({ response, body }) => !response.ok || !body?.success,
+      );
+
+      if (failedMeasurement) {
+        throw new Error(
+          failedMeasurement.body?.error ||
+            "L'animal a ete cree, mais les mesures initiales n'ont pas pu etre enregistrees",
+        );
+      }
+    }
 
     if (profilePictureFile.value) {
       const formData = new FormData();
@@ -340,7 +420,7 @@ const handleAddAnimal = async () => {
       </div>
 
       <div class="flex items-center justify-between">
-        <p>Poids</p>
+        <p>Poids (optionnel)</p>
         <div class="flex gap-2">
           <BaseInput v-model="weight" type="number" small />
           <span class="min-w-5">kg</span>
@@ -348,7 +428,7 @@ const handleAddAnimal = async () => {
       </div>
 
       <div class="flex items-center justify-between">
-        <p>Taille</p>
+        <p>Taille (optionnel)</p>
         <div class="flex gap-2">
           <BaseInput v-model="height" type="number" small />
           <span class="min-w-5">cm</span>

@@ -136,9 +136,7 @@ watch(
       />
     </div>
 
-    <div v-else class="flex h-full items-end justify-center text-xs">
-      Aucune mesure
-    </div>
+    <div v-else class="flex h-full items-end justify-center"></div>
 
     <p v-if="fetchError" class="absolute bottom-1 left-1 text-[10px]">
       {{ fetchError }}

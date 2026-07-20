@@ -55,7 +55,8 @@ const authHeaders = computed(() => {
   return headers;
 });
 
-const getRecordTimestamp = (recordDate: string) => new Date(recordDate).getTime();
+const getRecordTimestamp = (recordDate: string) =>
+  new Date(recordDate).getTime();
 
 const fetchLatestMeasurement = async () => {
   loading.value = true;
@@ -113,14 +114,16 @@ watch(
   >
     <p>Dernière mesure</p>
     <p>
-      <span :class="color" class="text-5xl font-black">{{ displayedValue }}</span>
+      <span :class="color" class="text-5xl font-black">{{
+        displayedValue
+      }}</span>
       <span>{{ label }}</span>
     </p>
     <p v-if="measurementDate">
       {{ new Date(measurementDate).toLocaleDateString("fr-FR") }}
     </p>
     <p v-else-if="loading">Chargement...</p>
-    <p v-else>Aucune mesure</p>
+    <p v-else class="min-h-5"></p>
     <p v-if="fetchError" class="text-xs text-red-600">{{ fetchError }}</p>
   </div>
 </template>
