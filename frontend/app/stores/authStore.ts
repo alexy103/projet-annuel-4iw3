@@ -46,6 +46,13 @@ export const useAuthStore = defineStore("auth", () => {
     refreshTokenCookie.value = result.refreshToken;
     pendingToken.value = null;
     requiresTwoFactor.value = false;
+
+    if (import.meta.client) {
+      localStorage.setItem("accessToken", result.accessToken);
+      localStorage.setItem("refreshToken", result.refreshToken);
+      localStorage.setItem("userId", String(result.userId));
+      localStorage.setItem("roleId", String(result.roleId));
+    }
   }
 
   function clearSession() {
@@ -53,6 +60,13 @@ export const useAuthStore = defineStore("auth", () => {
     refreshTokenCookie.value = null;
     pendingToken.value = null;
     requiresTwoFactor.value = false;
+
+    if (import.meta.client) {
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("refreshToken");
+      localStorage.removeItem("userId");
+      localStorage.removeItem("roleId");
+    }
   }
 
   async function login(email: string, password: string) {
@@ -139,6 +153,12 @@ export const useAuthStore = defineStore("auth", () => {
 
       accessToken.value = result.accessToken;
       refreshTokenCookie.value = result.refreshToken;
+
+      if (import.meta.client) {
+        localStorage.setItem("accessToken", result.accessToken);
+        localStorage.setItem("refreshToken", result.refreshToken);
+      }
+
       return true;
     } catch {
       clearSession();

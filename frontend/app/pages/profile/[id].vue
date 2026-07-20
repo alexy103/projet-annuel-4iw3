@@ -230,8 +230,8 @@ const confirmTwoFactorDisable = async () => {
 
 const logout = async () => {
   await authStore.logout();
-  userStore.reset();
   await router.push("/login");
+  userStore.reset();
 };
 
 onMounted(() => {
