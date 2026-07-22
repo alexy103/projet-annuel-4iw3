@@ -1,10 +1,8 @@
 import { test, expect, type Page } from "@playwright/test";
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-
 const API = "http://localhost:3003/api";
 
-/** Wraps data in the standard backend response envelope. */
+// wraps data in the { success, data } envelope the backend returns
 function ok(data: unknown) {
   return JSON.stringify({ success: true, data });
 }
@@ -26,7 +24,7 @@ const MOCK_SESSION = {
   refreshToken: "test-refresh-token",
 };
 
-/** Intercepts all endpoints that the dashboard (index) page loads on mount. */
+// intercepts everything the dashboard (index) page loads on mount
 async function mockDashboardEndpoints(page: Page) {
   await page.route(`${API}/users/me`, (route) =>
     route.fulfill({ contentType: "application/json", body: ok(MOCK_USER) }),
@@ -51,7 +49,7 @@ async function mockDashboardEndpoints(page: Page) {
   );
 }
 
-/** Intercepts all endpoints that the profile page loads on mount. */
+// intercepts everything the profile page loads on mount
 async function mockProfileEndpoints(page: Page) {
   await page.route(`${API}/auth/2fa/status`, (route) =>
     route.fulfill({
@@ -63,8 +61,6 @@ async function mockProfileEndpoints(page: Page) {
     route.fulfill({ contentType: "application/json", body: ok([]) }),
   );
 }
-
-// ─── Login ───────────────────────────────────────────────────────────────────
 
 test.describe("Login flow", () => {
   test("successful login redirects to the dashboard", async ({ page }) => {
@@ -178,8 +174,6 @@ test.describe("Login flow", () => {
   });
 });
 
-// ─── Register ─────────────────────────────────────────────────────────────────
-
 test.describe("Register flow", () => {
   test("shows an error immediately when passwords do not match", async ({ page }) => {
     await page.goto("/register");
@@ -274,8 +268,6 @@ test.describe("Register flow", () => {
     await expect(page).toHaveURL("/register");
   });
 });
-
-// ─── Logout ──────────────────────────────────────────────────────────────────
 
 test.describe("Logout flow", () => {
   test("redirects to /login after clicking Déconnexion on the profile page", async ({

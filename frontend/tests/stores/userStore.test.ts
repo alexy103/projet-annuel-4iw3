@@ -2,8 +2,6 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { mockNuxtImport } from "@nuxt/test-utils/runtime";
 import { setActivePinia, createPinia } from "pinia";
 
-// ─── Mocks ───────────────────────────────────────────────────────────────────
-
 const mockApiFetch = vi.fn();
 mockNuxtImport("useApi", () => () => ({ apiFetch: mockApiFetch }));
 
@@ -16,8 +14,6 @@ mockNuxtImport("useRuntimeConfig", () => () => ({
   public: { apiBase: "http://localhost:3003/api", apiKey: "test-key" },
 }));
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-
 const meResponse = {
   id: 7,
   first_name: "Alice",
@@ -26,8 +22,6 @@ const meResponse = {
   profile_picture: "/uploads/users/alice.jpg",
   onboarding_completed: true,
 };
-
-// ─── Tests ───────────────────────────────────────────────────────────────────
 
 describe("userStore – fetchMe", () => {
   beforeEach(() => {

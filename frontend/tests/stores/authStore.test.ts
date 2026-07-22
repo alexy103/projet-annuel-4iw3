@@ -2,12 +2,10 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { mockNuxtImport } from "@nuxt/test-utils/runtime";
 import { setActivePinia, createPinia } from "pinia";
 
-// ─── Mocks ───────────────────────────────────────────────────────────────────
-
 const mockApiFetch = vi.fn();
 mockNuxtImport("useApi", () => () => ({ apiFetch: mockApiFetch }));
 
-// useCookie : ref simple persistant par clé entre les appels du même store
+// keeps one ref per cookie name so the store reads back what it wrote
 const cookieStore: Record<string, ReturnType<typeof ref>> = {};
 mockNuxtImport(
   "useCookie",
@@ -16,8 +14,6 @@ mockNuxtImport(
     return cookieStore[name];
   }
 );
-
-// ─── Tests ───────────────────────────────────────────────────────────────────
 
 describe("authStore – login", () => {
   beforeEach(() => {

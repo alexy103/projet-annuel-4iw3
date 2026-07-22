@@ -2,9 +2,6 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { mockNuxtImport } from "@nuxt/test-utils/runtime";
 import { setActivePinia, createPinia } from "pinia";
 
-// ─── Mocks ───────────────────────────────────────────────────────────────────
-
-// $fetch est un global Nuxt (pas un auto-import) → vi.stubGlobal
 const mockFetch = vi.fn();
 
 const mockRefreshAccessToken = vi.fn();
@@ -17,8 +14,6 @@ mockNuxtImport("useRuntimeConfig", () => () => ({
   app: { baseURL: "/" },
   public: { apiBase: "http://localhost:3003/api", apiKey: "test-key" },
 }));
-
-// ─── Tests ───────────────────────────────────────────────────────────────────
 
 describe("useApi – apiFetch", () => {
   beforeEach(() => {
