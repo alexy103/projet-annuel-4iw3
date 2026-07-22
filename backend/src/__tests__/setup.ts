@@ -1,4 +1,3 @@
-// Set required env vars before any module is loaded
 process.env.JWT_SECRET = "test-jwt-secret-that-is-long-enough-32ch";
 process.env.JWT_REFRESH_SECRET = "test-refresh-secret-that-is-long-32ch";
 process.env.PEPPER_SECRET = "test-pepper-secret";

@@ -53,7 +53,6 @@ jest.mock("otplib", () => ({
   },
 }));
 
-// imports come after the mocks above so they pick up the mocked versions
 const { usersRepository, sessionsRepository, users2FARepository, rolesRepository } =
   jest.requireMock("../../repositories") as {
     usersRepository: Record<string, jest.Mock>;
@@ -131,7 +130,6 @@ describe("authService.login", () => {
     sessionsRepository.create.mockResolvedValue(mockSession);
     users2FARepository.findByUserId.mockResolvedValue(null);
 
-    // Mock verifyPassword via bcrypt — on hash manuellement le mot de passe avec le pepper
     jest
       .spyOn(require("../../utils/password.utils"), "verifyPassword")
       .mockResolvedValue(true);

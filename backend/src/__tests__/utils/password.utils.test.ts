@@ -30,7 +30,6 @@ describe("verifyPassword", () => {
   });
 
   it("tient compte du pepper (hash d'une autre app != valide)", async () => {
-    // hash créé sans pepper via bcrypt direct != verifyPassword qui ajoute le pepper
     const bcrypt = require("bcrypt");
     const hashSansPepper = await bcrypt.hash("secret", 12);
     expect(await verifyPassword("secret", hashSansPepper)).toBe(false);
