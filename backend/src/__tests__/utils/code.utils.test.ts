@@ -2,13 +2,13 @@ import { generateVerificationCode, isCodeExpired, generateRecoveryCodes } from "
 
 describe("generateVerificationCode", () => {
   it("retourne un code à 6 chiffres", () => {
-    const code = generateVerificationCode();
+    const code: string = generateVerificationCode();
     expect(code).toMatch(/^\d{6}$/);
   });
 
   it("génère un code dans la plage 100000-999999", () => {
     for (let i = 0; i < 50; i++) {
-      const n = parseInt(generateVerificationCode(), 10);
+      const n: number = parseInt(generateVerificationCode(), 10);
       expect(n).toBeGreaterThanOrEqual(100000);
       expect(n).toBeLessThanOrEqual(999999);
     }
@@ -25,7 +25,7 @@ describe("isCodeExpired", () => {
   });
 
   it("retourne true pour la date exacte du moment (expiré)", () => {
-    const now = new Date(Date.now() - 1);
+    const now: Date = new Date(Date.now() - 1);
     expect(isCodeExpired(now)).toBe(true);
   });
 });
@@ -47,7 +47,7 @@ describe("generateRecoveryCodes", () => {
   });
 
   it("les codes sont uniques", () => {
-    const codes = generateRecoveryCodes(8);
+    const codes: string[] = generateRecoveryCodes(8);
     expect(new Set(codes).size).toBe(8);
   });
 });

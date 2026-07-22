@@ -3,7 +3,6 @@ import { authenticator } from "otplib";
 import { authService } from "../../services/auth.service";
 import { AppError } from "../../types";
 
-// --- Mocks ---
 jest.mock("../../repositories", () => ({
   usersRepository: {
     findByEmail: jest.fn(),
@@ -54,13 +53,48 @@ jest.mock("otplib", () => ({
   },
 }));
 
-// Imports after mocks so they receive the mocked versions
+// imports come after the mocks above so they pick up the mocked versions
 const { usersRepository, sessionsRepository, users2FARepository, rolesRepository } =
-  jest.requireMock("../../repositories");
-const { userService } = jest.requireMock("../../services/users.service");
+  jest.requireMock("../../repositories") as {
+    usersRepository: Record<string, jest.Mock>;
+    sessionsRepository: Record<string, jest.Mock>;
+    users2FARepository: Record<string, jest.Mock>;
+    rolesRepository: Record<string, jest.Mock>;
+  };
+const { userService } = jest.requireMock("../../services/users.service") as {
+  userService: Record<string, jest.Mock>;
+};
 
-// --- Helpers ---
-const mockUser = {
+type MockUser = {
+  id: number;
+  email: string;
+  password_hash: string;
+  first_name: string;
+  last_name: string;
+  is_activated: boolean;
+  email_verified: boolean;
+  must_change_password: boolean;
+  role_id: number;
+  clinic_id: number | null;
+  onboarding_completed: boolean;
+  profile_picture: string | null;
+  oauth_provider: string | null;
+  oauth_id: string | null;
+  email_verification_code: string | null;
+  email_verification_expires_at: Date | null;
+  password_temp_expires_at: Date | null;
+};
+
+type MockSession = {
+  id: number;
+  user_id: number;
+  refresh_token_hash: string;
+  user_agent: string | null;
+  ip_address: string | null;
+  created_at: Date;
+};
+
+const mockUser: MockUser = {
   id: 1,
   email: "alice@example.com",
   password_hash: "hashed",
@@ -80,7 +114,7 @@ const mockUser = {
   password_temp_expires_at: null,
 };
 
-const mockSession = {
+const mockSession: MockSession = {
   id: 10,
   user_id: 1,
   refresh_token_hash: "refreshhash",
@@ -88,8 +122,6 @@ const mockSession = {
   ip_address: null,
   created_at: new Date(),
 };
-
-// --- Tests ---
 
 describe("authService.login", () => {
   beforeEach(() => jest.clearAllMocks());
@@ -171,7 +203,7 @@ describe("authService.verifyCode", () => {
   beforeEach(() => jest.clearAllMocks());
 
   it("valide un code correct non expiré", async () => {
-    const future = new Date(Date.now() + 600_000);
+    const future: Date = new Date(Date.now() + 600_000);
     usersRepository.findByEmail.mockResolvedValue({
       ...mockUser,
       email_verified: false,
@@ -195,7 +227,7 @@ describe("authService.verifyCode", () => {
   });
 
   it("lève une erreur si le code est expiré", async () => {
-    const past = new Date(Date.now() - 1000);
+    const past: Date = new Date(Date.now() - 1000);
     usersRepository.findByEmail.mockResolvedValue({
       ...mockUser,
       email_verified: false,
@@ -206,7 +238,7 @@ describe("authService.verifyCode", () => {
   });
 
   it("lève une erreur si le code est incorrect", async () => {
-    const future = new Date(Date.now() + 600_000);
+    const future: Date = new Date(Date.now() + 600_000);
     usersRepository.findByEmail.mockResolvedValue({
       ...mockUser,
       email_verified: false,
@@ -272,7 +304,13 @@ describe("authService.enableTwoFactor", () => {
 describe("authService.disableTwoFactor", () => {
   beforeEach(() => jest.clearAllMocks());
 
-  const mock2FA = {
+  const mock2FA: {
+    id: number;
+    user_id: number;
+    totp_secret: string;
+    is_enabled: boolean;
+    recovery_codes: string;
+  } = {
     id: 5,
     user_id: 1,
     totp_secret: "SECRET",
@@ -346,8 +384,11 @@ describe("authService.logout", () => {
 
 describe("authService.createPendingTwoFactorToken", () => {
   it("crée un JWT avec le purpose '2fa'", () => {
-    const token = authService.createPendingTwoFactorToken(42);
-    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as Record<string, unknown>;
+    const token: string = authService.createPendingTwoFactorToken(42);
+    const decoded: Record<string, unknown> = jwt.verify(
+      token,
+      process.env.JWT_SECRET!
+    ) as Record<string, unknown>;
     expect(decoded.userId).toBe(42);
     expect(decoded.purpose).toBe("2fa");
   });

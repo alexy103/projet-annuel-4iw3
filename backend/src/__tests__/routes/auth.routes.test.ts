@@ -1,7 +1,6 @@
 import request from "supertest";
 import jwt from "jsonwebtoken";
 
-// Mock du module DB avant tout import de l'app
 jest.mock("../../config/db", () => ({
   db: { query: jest.fn() },
 }));
@@ -67,18 +66,23 @@ jest.mock("nodemailer", () => ({
 
 import { app } from "../../app";
 
-const { authService } = jest.requireMock("../../services/auth.service");
-const { sessionsRepository, usersRepository, rolesRepository } =
-  jest.requireMock("../../repositories");
+const { authService } = jest.requireMock("../../services/auth.service") as {
+  authService: Record<string, jest.Mock>;
+};
+const { sessionsRepository, usersRepository, rolesRepository } = jest.requireMock(
+  "../../repositories"
+) as {
+  sessionsRepository: Record<string, jest.Mock>;
+  usersRepository: Record<string, jest.Mock>;
+  rolesRepository: Record<string, jest.Mock>;
+};
 
-const API_KEY = "test-api-key";
+const API_KEY: string = "test-api-key";
 
-// Helper : génère un token JWT valide pour les tests des routes protégées
 function makeAuthToken(userId = 1) {
   return jwt.sign({ userId }, process.env.JWT_SECRET!);
 }
 
-// Helper : configure les mocks de l'auth middleware pour un utilisateur donné
 function setupAuthMiddlewareMocks(userId = 1, roleLabel = "user") {
   sessionsRepository.findByUser.mockResolvedValue([{ id: 10 }]);
   usersRepository.findById.mockResolvedValue({
@@ -93,16 +97,14 @@ function setupAuthMiddlewareMocks(userId = 1, roleLabel = "user") {
 
 beforeEach(() => jest.clearAllMocks());
 
-// ─── Middleware API Key ──────────────────────────────────────────────────────
-
 describe("Middleware requireApiKey", () => {
   it("retourne 401 sans clé API", async () => {
-    const res = await request(app).post("/api/auth/login").send({});
+    const res: request.Response = await request(app).post("/api/auth/login").send({});
     expect(res.status).toBe(401);
   });
 
   it("retourne 401 avec une clé API invalide", async () => {
-    const res = await request(app)
+    const res: request.Response = await request(app)
       .post("/api/auth/login")
       .set("x-api-key", "wrong-key")
       .send({});
@@ -110,11 +112,9 @@ describe("Middleware requireApiKey", () => {
   });
 });
 
-// ─── POST /api/auth/register ─────────────────────────────────────────────────
-
 describe("POST /api/auth/register", () => {
   it("retourne 400 si des champs obligatoires sont manquants", async () => {
-    const res = await request(app)
+    const res: request.Response = await request(app)
       .post("/api/auth/register")
       .set("x-api-key", API_KEY)
       .send({ email: "test@test.com" }); // manque first_name, last_name, password
@@ -124,7 +124,7 @@ describe("POST /api/auth/register", () => {
   it("retourne 201 et appelle authService.register", async () => {
     authService.register.mockResolvedValue({ id: 1, email: "alice@example.com" });
 
-    const res = await request(app)
+    const res: request.Response = await request(app)
       .post("/api/auth/register")
       .set("x-api-key", API_KEY)
       .send({
@@ -143,7 +143,7 @@ describe("POST /api/auth/register", () => {
     const { AppError } = await import("../../types");
     authService.register.mockRejectedValue(new AppError("Email already exists", 409));
 
-    const res = await request(app)
+    const res: request.Response = await request(app)
       .post("/api/auth/register")
       .set("x-api-key", API_KEY)
       .send({
@@ -157,11 +157,9 @@ describe("POST /api/auth/register", () => {
   });
 });
 
-// ─── POST /api/auth/login ─────────────────────────────────────────────────────
-
 describe("POST /api/auth/login", () => {
   it("retourne 400 si email/password sont absents", async () => {
-    const res = await request(app)
+    const res: request.Response = await request(app)
       .post("/api/auth/login")
       .set("x-api-key", API_KEY)
       .send({});
@@ -177,7 +175,7 @@ describe("POST /api/auth/login", () => {
       sessionId: 10,
     });
 
-    const res = await request(app)
+    const res: request.Response = await request(app)
       .post("/api/auth/login")
       .set("x-api-key", API_KEY)
       .send({ email: "alice@example.com", password: "pass123" });
@@ -193,7 +191,7 @@ describe("POST /api/auth/login", () => {
       pendingToken: "pending.jwt",
     });
 
-    const res = await request(app)
+    const res: request.Response = await request(app)
       .post("/api/auth/login")
       .set("x-api-key", API_KEY)
       .send({ email: "alice@example.com", password: "pass123" });
@@ -207,7 +205,7 @@ describe("POST /api/auth/login", () => {
     const { AppError } = await import("../../types");
     authService.login.mockRejectedValue(new AppError("Invalid user or password", 401));
 
-    const res = await request(app)
+    const res: request.Response = await request(app)
       .post("/api/auth/login")
       .set("x-api-key", API_KEY)
       .send({ email: "alice@example.com", password: "wrong" });
@@ -216,11 +214,9 @@ describe("POST /api/auth/login", () => {
   });
 });
 
-// ─── POST /api/auth/verify-code ───────────────────────────────────────────────
-
 describe("POST /api/auth/verify-code", () => {
   it("retourne 400 si le corps est invalide", async () => {
-    const res = await request(app)
+    const res: request.Response = await request(app)
       .post("/api/auth/verify-code")
       .set("x-api-key", API_KEY)
       .send({ email: "alice@example.com" }); // manque le code
@@ -230,7 +226,7 @@ describe("POST /api/auth/verify-code", () => {
   it("retourne 200 sur vérification réussie", async () => {
     authService.verifyCode.mockResolvedValue({ id: 1, email_verified: true });
 
-    const res = await request(app)
+    const res: request.Response = await request(app)
       .post("/api/auth/verify-code")
       .set("x-api-key", API_KEY)
       .send({ email: "alice@example.com", code: "123456" });
@@ -240,11 +236,9 @@ describe("POST /api/auth/verify-code", () => {
   });
 });
 
-// ─── Routes protégées (requireAuth) ──────────────────────────────────────────
-
 describe("GET /api/auth/2fa/status", () => {
   it("retourne 401 sans token Bearer", async () => {
-    const res = await request(app)
+    const res: request.Response = await request(app)
       .get("/api/auth/2fa/status")
       .set("x-api-key", API_KEY);
     expect(res.status).toBe(401);
@@ -254,7 +248,7 @@ describe("GET /api/auth/2fa/status", () => {
     setupAuthMiddlewareMocks();
     authService.getTwoFactorStatus.mockResolvedValue({ enabled: false });
 
-    const res = await request(app)
+    const res: request.Response = await request(app)
       .get("/api/auth/2fa/status")
       .set("x-api-key", API_KEY)
       .set("Authorization", `Bearer ${makeAuthToken(1)}`);
@@ -266,7 +260,7 @@ describe("GET /api/auth/2fa/status", () => {
 
 describe("POST /api/auth/logout", () => {
   it("retourne 401 sans token", async () => {
-    const res = await request(app)
+    const res: request.Response = await request(app)
       .post("/api/auth/logout")
       .set("x-api-key", API_KEY);
     expect(res.status).toBe(401);
@@ -276,7 +270,7 @@ describe("POST /api/auth/logout", () => {
     setupAuthMiddlewareMocks();
     authService.logout.mockResolvedValue(undefined);
 
-    const res = await request(app)
+    const res: request.Response = await request(app)
       .post("/api/auth/logout")
       .set("x-api-key", API_KEY)
       .set("Authorization", `Bearer ${makeAuthToken(1)}`);
