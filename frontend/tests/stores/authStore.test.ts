@@ -5,7 +5,6 @@ import { setActivePinia, createPinia } from "pinia";
 const mockApiFetch = vi.fn();
 mockNuxtImport("useApi", () => () => ({ apiFetch: mockApiFetch }));
 
-// keeps one ref per cookie name so the store reads back what it wrote
 const cookieStore: Record<string, ReturnType<typeof ref>> = {};
 mockNuxtImport(
   "useCookie",
@@ -33,7 +32,6 @@ describe("authStore – login", () => {
     const store = useAuthStore();
     const result = await store.login("alice@example.com", "pass");
 
-    // Pinia déroule les refs → store.accessToken est la valeur directe
     expect(result.requiresTwoFactor).toBe(false);
     expect(store.isAuthenticated).toBe(true);
     expect(store.accessToken).toBe("access-tok");

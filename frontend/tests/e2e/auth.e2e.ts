@@ -2,7 +2,6 @@ import { test, expect, type Page } from "@playwright/test";
 
 const API = "http://localhost:3003/api";
 
-// wraps data in the { success, data } envelope the backend returns
 function ok(data: unknown) {
   return JSON.stringify({ success: true, data });
 }
@@ -24,7 +23,6 @@ const MOCK_SESSION = {
   refreshToken: "test-refresh-token",
 };
 
-// intercepts everything the dashboard (index) page loads on mount
 async function mockDashboardEndpoints(page: Page) {
   await page.route(`${API}/users/me`, (route) =>
     route.fulfill({ contentType: "application/json", body: ok(MOCK_USER) }),
@@ -49,7 +47,6 @@ async function mockDashboardEndpoints(page: Page) {
   );
 }
 
-// intercepts everything the profile page loads on mount
 async function mockProfileEndpoints(page: Page) {
   await page.route(`${API}/auth/2fa/status`, (route) =>
     route.fulfill({
@@ -273,7 +270,6 @@ test.describe("Logout flow", () => {
   test("redirects to /login after clicking Déconnexion on the profile page", async ({
     page,
   }) => {
-    // Set up authenticated state via the login flow first
     await mockDashboardEndpoints(page);
     await mockProfileEndpoints(page);
     await page.route(`${API}/auth/login`, (route) =>
@@ -283,7 +279,6 @@ test.describe("Logout flow", () => {
       route.fulfill({ contentType: "application/json", body: ok(null) }),
     );
 
-    // Login
     await page.goto("/login");
     await page.waitForLoadState("networkidle");
     await page.getByLabel("Adresse e-mail").fill("alice@example.com");
@@ -291,7 +286,6 @@ test.describe("Logout flow", () => {
     await page.getByRole("button", { name: "Connexion" }).click();
     await page.waitForURL("/");
 
-    // Navigate to profile page
     await page.goto(`/profile/${MOCK_USER.id}`);
     await page.waitForLoadState("networkidle");
     await page.getByRole("button", { name: "Déconnexion" }).click();
