@@ -24,8 +24,8 @@ interface MeResponse {
 export const useUserStore = defineStore("user", () => {
   const isReady = ref(false);
   const id = ref<number | null>(null);
-  const firstName = ref("John");
-  const lastName = ref("Doe");
+  const firstName = ref("");
+  const lastName = ref("");
   const email = ref("");
   const avatar = ref<string | null>(null);
   const onboardingCompleted = ref(false);
@@ -49,7 +49,11 @@ export const useUserStore = defineStore("user", () => {
     return `${base}${avatar.value}`;
   });
 
-  const updateProfile = async (data: { firstName?: string; lastName?: string; profilePictureFile?: File }) => {
+  const updateProfile = async (data: {
+    firstName?: string;
+    lastName?: string;
+    profilePictureFile?: File;
+  }) => {
     const { apiFetch } = useApi();
     const me = await apiFetch<MeResponse>("/users/me", {
       method: "PATCH",
@@ -64,15 +68,22 @@ export const useUserStore = defineStore("user", () => {
     if (data.profilePictureFile) {
       const formData = new FormData();
       formData.append("profile_picture", data.profilePictureFile);
-      const updated = await apiFetch<MeResponse>(`/users/${me.id}/profile-picture`, {
-        method: "PATCH",
-        body: formData,
-      });
+      const updated = await apiFetch<MeResponse>(
+        `/users/${me.id}/profile-picture`,
+        {
+          method: "PATCH",
+          body: formData,
+        },
+      );
       avatar.value = updated.profile_picture ?? null;
     }
   };
 
-  const completeOnboarding = async (data?: { firstName?: string; lastName?: string; profilePictureFile?: File }) => {
+  const completeOnboarding = async (data?: {
+    firstName?: string;
+    lastName?: string;
+    profilePictureFile?: File;
+  }) => {
     const { apiFetch } = useApi();
     const me = await apiFetch<MeResponse>("/users/me", {
       method: "PATCH",
@@ -89,10 +100,13 @@ export const useUserStore = defineStore("user", () => {
     if (data?.profilePictureFile && me.id) {
       const formData = new FormData();
       formData.append("profile_picture", data.profilePictureFile);
-      const updated = await apiFetch<MeResponse>(`/users/${me.id}/profile-picture`, {
-        method: "PATCH",
-        body: formData,
-      });
+      const updated = await apiFetch<MeResponse>(
+        `/users/${me.id}/profile-picture`,
+        {
+          method: "PATCH",
+          body: formData,
+        },
+      );
       avatar.value = updated.profile_picture ?? null;
     }
   };
@@ -124,14 +138,23 @@ export const useUserStore = defineStore("user", () => {
     try {
       const result = await apiFetch<ApiAnimal[]>(`/animals/user/${id.value}`);
       animals.value = result.map((animal: ApiAnimal) => {
-        const path = animal.profile_picture || animal.profile_picture_url || animal.image || null;
+        const path =
+          animal.profile_picture ||
+          animal.profile_picture_url ||
+          animal.image ||
+          null;
         const image = path
-          ? path.startsWith("http") ? path : `${baseUrl}${path}`
+          ? path.startsWith("http")
+            ? path
+            : `${baseUrl}${path}`
           : undefined;
         return { id: animal.id, name: animal.name, image };
       });
     } catch (error) {
-      errorMessage.value = error instanceof Error ? error.message : "Erreur lors du chargement des animaux";
+      errorMessage.value =
+        error instanceof Error
+          ? error.message
+          : "Erreur lors du chargement des animaux";
     } finally {
       isLoading.value = false;
     }
@@ -140,8 +163,8 @@ export const useUserStore = defineStore("user", () => {
   const reset = () => {
     isReady.value = false;
     id.value = null;
-    firstName.value = "John";
-    lastName.value = "Doe";
+    firstName.value = "";
+    lastName.value = "";
     email.value = "";
     avatar.value = null;
     onboardingCompleted.value = false;

@@ -278,9 +278,10 @@ const handleProfilePictureUpload = (event: Event) => {
   </div>
 
   <div v-else-if="userStore.onboardingCompleted === false" class="space-y-4">
-    <h1 class="mt-2 text-2xl font-bold">
+    <h1 v-if="userStore.firstName" class="mt-2 text-2xl font-bold">
       Bienvenue par minous, {{ userStore.firstName }}
     </h1>
+    <h1 v-else class="mt-2 text-2xl font-bold">Bienvenue par minous !</h1>
 
     <div class="flex items-center justify-around gap-4">
       <BaseInput label="Prénom" v-model="firstName" />

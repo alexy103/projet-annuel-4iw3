@@ -72,7 +72,9 @@ describe("userStore – avatarUrl", () => {
     const store = useUserStore();
     await store.fetchMe();
 
-    expect(store.avatarUrl).toBe("http://localhost:3003/uploads/users/alice.jpg");
+    expect(store.avatarUrl).toBe(
+      "http://localhost:3003/uploads/users/alice.jpg",
+    );
   });
 
   it("retourne null si aucun avatar", async () => {
@@ -115,19 +117,26 @@ describe("userStore – updateProfile", () => {
     expect(store.lastName).toBe("Martin");
     expect(mockApiFetch).toHaveBeenCalledWith(
       "/users/me",
-      expect.objectContaining({ method: "PATCH" })
+      expect.objectContaining({ method: "PATCH" }),
     );
   });
 
   it("upload la photo si un fichier est fourni", async () => {
-    const updatedWithPicture = { ...meResponse, profile_picture: "/uploads/users/new.jpg" };
+    const updatedWithPicture = {
+      ...meResponse,
+      profile_picture: "/uploads/users/new.jpg",
+    };
     mockApiFetch
       .mockResolvedValueOnce({ ...meResponse, id: 7 }) // PATCH /users/me
-      .mockResolvedValueOnce(updatedWithPicture);      // PATCH /users/:id/profile-picture
+      .mockResolvedValueOnce(updatedWithPicture); // PATCH /users/:id/profile-picture
 
     const store = useUserStore();
     const file = new File(["content"], "photo.jpg", { type: "image/jpeg" });
-    await store.updateProfile({ firstName: "Alice", lastName: "Dupont", profilePictureFile: file });
+    await store.updateProfile({
+      firstName: "Alice",
+      lastName: "Dupont",
+      profilePictureFile: file,
+    });
 
     expect(mockApiFetch).toHaveBeenCalledTimes(2);
     expect(store.avatar).toBe("/uploads/users/new.jpg");
@@ -141,7 +150,10 @@ describe("userStore – completeOnboarding", () => {
   });
 
   it("marque onboardingCompleted=true après l'appel API", async () => {
-    mockApiFetch.mockResolvedValue({ ...meResponse, onboarding_completed: true });
+    mockApiFetch.mockResolvedValue({
+      ...meResponse,
+      onboarding_completed: true,
+    });
 
     const store = useUserStore();
     await store.completeOnboarding({ firstName: "Alice", lastName: "Dupont" });
@@ -191,7 +203,9 @@ describe("userStore – fetchAnimals", () => {
 
     expect(store.animals).toHaveLength(2);
     expect(store.animals[0]?.name).toBe("Rex");
-    expect(store.animals[0]?.image).toBe("http://localhost:3003/uploads/animals/rex.jpg");
+    expect(store.animals[0]?.image).toBe(
+      "http://localhost:3003/uploads/animals/rex.jpg",
+    );
     expect(store.animals[1]?.name).toBe("Mimi");
     expect(store.animals[1]?.image).toBeUndefined();
   });
@@ -212,8 +226,8 @@ describe("userStore – reset", () => {
 
     expect(store.isReady).toBe(false);
     expect(store.id).toBeNull();
-    expect(store.firstName).toBe("John");
-    expect(store.lastName).toBe("Doe");
+    expect(store.firstName).toBe("");
+    expect(store.lastName).toBe("");
     expect(store.email).toBe("");
     expect(store.avatar).toBeNull();
     expect(store.onboardingCompleted).toBe(false);

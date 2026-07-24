@@ -42,7 +42,8 @@ const save = async () => {
     });
     profilePictureFile.value = null;
   } catch (error) {
-    saveError.value = error instanceof Error ? error.message : "Erreur lors de la sauvegarde";
+    saveError.value =
+      error instanceof Error ? error.message : "Erreur lors de la sauvegarde";
   } finally {
     isSaving.value = false;
   }
@@ -63,9 +64,12 @@ const fetchTreatmentTypes = async () => {
   try {
     const { apiFetch } = useApi();
     const result = await apiFetch<TreatmentType[]>("/treatment-types");
-    treatmentTypes.value = result.sort((a, b) => a.name.localeCompare(b.name, "fr"));
+    treatmentTypes.value = result.sort((a, b) =>
+      a.name.localeCompare(b.name, "fr"),
+    );
   } catch (error) {
-    treatmentTypeErrorMessage.value = "Impossible de charger les types de traitement.";
+    treatmentTypeErrorMessage.value =
+      "Impossible de charger les types de traitement.";
   } finally {
     isLoadingTreatmentTypes.value = false;
   }
@@ -74,7 +78,8 @@ const fetchTreatmentTypes = async () => {
 const createTreatmentType = async () => {
   const name = newTreatmentTypeName.value.trim();
   if (!name) {
-    treatmentTypeErrorMessage.value = "Le nom du type de traitement est obligatoire.";
+    treatmentTypeErrorMessage.value =
+      "Le nom du type de traitement est obligatoire.";
     return;
   }
   treatmentTypeErrorMessage.value = "";
@@ -88,7 +93,8 @@ const createTreatmentType = async () => {
     newTreatmentTypeName.value = "";
     await fetchTreatmentTypes();
   } catch (error) {
-    treatmentTypeErrorMessage.value = "Impossible d'ajouter ce type de traitement.";
+    treatmentTypeErrorMessage.value =
+      "Impossible d'ajouter ce type de traitement.";
   } finally {
     isSavingTreatmentType.value = false;
   }
@@ -108,7 +114,8 @@ const cancelEditingTreatmentType = () => {
 const saveTreatmentType = async (typeId: number) => {
   const name = editingTreatmentTypeName.value.trim();
   if (!name) {
-    treatmentTypeErrorMessage.value = "Le nom du type de traitement est obligatoire.";
+    treatmentTypeErrorMessage.value =
+      "Le nom du type de traitement est obligatoire.";
     return;
   }
   treatmentTypeErrorMessage.value = "";
@@ -122,7 +129,8 @@ const saveTreatmentType = async (typeId: number) => {
     cancelEditingTreatmentType();
     await fetchTreatmentTypes();
   } catch (error) {
-    treatmentTypeErrorMessage.value = "Impossible de modifier ce type de traitement.";
+    treatmentTypeErrorMessage.value =
+      "Impossible de modifier ce type de traitement.";
   } finally {
     isSavingTreatmentType.value = false;
   }
@@ -133,13 +141,16 @@ const deleteTreatmentType = async (typeId: number) => {
   isSavingTreatmentType.value = true;
   try {
     const { apiFetch } = useApi();
-    await apiFetch<TreatmentType>(`/treatment-types/${typeId}`, { method: "DELETE" });
+    await apiFetch<TreatmentType>(`/treatment-types/${typeId}`, {
+      method: "DELETE",
+    });
     if (editingTreatmentTypeId.value === typeId) {
       cancelEditingTreatmentType();
     }
     await fetchTreatmentTypes();
   } catch (error) {
-    treatmentTypeErrorMessage.value = "Impossible de supprimer ce type de traitement.";
+    treatmentTypeErrorMessage.value =
+      "Impossible de supprimer ce type de traitement.";
   } finally {
     isSavingTreatmentType.value = false;
   }
@@ -183,7 +194,9 @@ const startTwoFactorSetup = async () => {
     showSetupPopup.value = true;
   } catch (error) {
     setupError.value =
-      error instanceof Error ? error.message : "Impossible de démarrer l'activation";
+      error instanceof Error
+        ? error.message
+        : "Impossible de démarrer l'activation";
   }
 };
 
@@ -222,7 +235,8 @@ const confirmTwoFactorDisable = async () => {
     showDisablePopup.value = false;
     disableCode.value = "";
   } catch (error) {
-    disableError.value = error instanceof Error ? error.message : "Code invalide";
+    disableError.value =
+      error instanceof Error ? error.message : "Code invalide";
   } finally {
     isDisabling.value = false;
   }
@@ -251,9 +265,16 @@ onUnmounted(() => {
     <h1 class="mt-2 mb-4 text-2xl font-bold">Paramètres</h1>
 
     <BaseSection title="Mon compte">
-      <label for="profile-picture-settings" class="mx-auto block w-fit cursor-pointer">
+      <label
+        for="profile-picture-settings"
+        class="mx-auto block w-fit cursor-pointer"
+      >
         <img
-          :src="profilePicturePreview || userStore.avatarUrl || '/john.png'"
+          :src="
+            profilePicturePreview ||
+            userStore.avatarUrl ||
+            '/default-avatar.png'
+          "
           alt=""
           class="size-50 rounded-full object-cover"
         />
@@ -315,7 +336,10 @@ onUnmounted(() => {
           :key="type.id"
           class="bg-background flex flex-col gap-2 rounded-xl border border-black/20 p-3 md:flex-row md:items-center"
         >
-          <div v-if="editingTreatmentTypeId === type.id" class="w-full md:flex-1">
+          <div
+            v-if="editingTreatmentTypeId === type.id"
+            class="w-full md:flex-1"
+          >
             <BaseInput v-model="editingTreatmentTypeName" />
           </div>
           <p v-else class="font-semibold md:flex-1">{{ type.name }}</p>
@@ -397,10 +421,16 @@ onUnmounted(() => {
       </p>
     </BaseSection>
 
-    <p v-if="saveError" class="text-center text-sm text-red-500">{{ saveError }}</p>
+    <p v-if="saveError" class="text-center text-sm text-red-500">
+      {{ saveError }}
+    </p>
 
     <div class="flex items-center justify-center gap-4">
-      <BaseButton class="flex justify-center" :disabled="isSaving" @click="save">
+      <BaseButton
+        class="flex justify-center"
+        :disabled="isSaving"
+        @click="save"
+      >
         {{ isSaving ? "Enregistrement..." : "Enregistrer" }}
       </BaseButton>
       <BaseButton class="flex justify-center" color="white" @click="logout">
@@ -413,15 +443,15 @@ onUnmounted(() => {
         <template v-if="!recoveryCodes">
           <p class="font-bold">Activer la double authentification</p>
           <p class="text-sm">
-            Scannez ce QR code avec votre application d'authentification
-            (Google Authenticator, Authy...).
+            Scannez ce QR code avec votre application d'authentification (Google
+            Authenticator, Authy...).
           </p>
           <div class="flex w-full items-center justify-center">
             <div class="size-48">
               <Qrcode :value="setupOtpauthUrl" />
             </div>
           </div>
-          <p class="text-grey-700 break-all text-xs">{{ setupSecret }}</p>
+          <p class="text-grey-700 text-xs break-all">{{ setupSecret }}</p>
           <BaseInput v-model="setupCode" label="Code à 6 chiffres" />
           <p v-if="setupError" class="text-sm text-red-500">{{ setupError }}</p>
           <BaseButton
@@ -444,7 +474,10 @@ onUnmounted(() => {
               {{ recoveryCode }}
             </li>
           </ul>
-          <BaseButton class="flex w-full justify-center" @click="closeSetupPopup">
+          <BaseButton
+            class="flex w-full justify-center"
+            @click="closeSetupPopup"
+          >
             Terminé
           </BaseButton>
         </template>
@@ -455,11 +488,13 @@ onUnmounted(() => {
       <div class="w-64 space-y-4 text-center">
         <p class="font-bold">Désactiver la double authentification</p>
         <p class="text-sm">
-          Entrez un code de votre application d'authentification (ou un code
-          de récupération) pour confirmer.
+          Entrez un code de votre application d'authentification (ou un code de
+          récupération) pour confirmer.
         </p>
         <BaseInput v-model="disableCode" label="Code" />
-        <p v-if="disableError" class="text-sm text-red-500">{{ disableError }}</p>
+        <p v-if="disableError" class="text-sm text-red-500">
+          {{ disableError }}
+        </p>
         <BaseButton
           :disabled="isDisabling"
           class="flex w-full justify-center"
