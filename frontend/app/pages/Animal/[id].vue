@@ -7,6 +7,7 @@ type ApiResponse<T> = {
 
 type Animal = {
   id: number;
+  user_id: number;
   name: string;
   breed: string;
   birth_date: string;
@@ -159,6 +160,48 @@ const animalId = computed(() => {
   return Array.isArray(param) ? param[0] : param;
 });
 
+const currentUserId = computed<number | null>(() => {
+  if (!import.meta.client) {
+    return null;
+  }
+
+  const rawUserId = localStorage.getItem("userId");
+  const parsedUserId = Number(rawUserId);
+
+  if (!Number.isInteger(parsedUserId) || parsedUserId <= 0) {
+    return null;
+  }
+
+  return parsedUserId;
+});
+
+const currentRoleId = computed<number | null>(() => {
+  if (!import.meta.client) {
+    return null;
+  }
+
+  const rawRoleId = localStorage.getItem("roleId");
+  const parsedRoleId = Number(rawRoleId);
+
+  if (!Number.isInteger(parsedRoleId) || parsedRoleId <= 0) {
+    return null;
+  }
+
+  return parsedRoleId;
+});
+
+const isAdmin = computed(() => currentRoleId.value === 1);
+
+const isAnimalOwner = computed(() => {
+  if (!animal.value || currentUserId.value === null) {
+    return false;
+  }
+
+  return animal.value.user_id === currentUserId.value;
+});
+
+const canEditAnimal = computed(() => isAdmin.value || isAnimalOwner.value);
+
 const parsedAnimalId = computed<number | null>(() => {
   const value = Number(animalId.value);
 
@@ -253,6 +296,8 @@ const sexIconClass = computed(() => {
 
   return "size-6 text-blue-700";
 });
+
+const isAnimalShared = computed(() => Boolean(animal.value?.is_shared));
 
 const formatDate = (date?: string) => {
   if (!date) {
@@ -691,6 +736,12 @@ const fetchTreatmentsData = async () => {
 };
 
 const submitNewTreatment = async () => {
+  if (!canEditAnimal.value) {
+    newTreatmentError.value =
+      "Seul le proprietaire ou un admin peut modifier cet animal.";
+    return;
+  }
+
   if (!parsedAnimalId.value) {
     newTreatmentError.value = "Animal introuvable.";
     return;
@@ -796,6 +847,12 @@ const submitNewTreatment = async () => {
 };
 
 const submitEdit = async () => {
+  if (!canEditAnimal.value) {
+    errorMessage.value =
+      "Seul le proprietaire ou un admin peut modifier cet animal.";
+    return;
+  }
+
   if (!animal.value || !animalId.value) {
     return;
   }
@@ -853,7 +910,57 @@ const submitEdit = async () => {
   }
 };
 
+const toggleAnimalShared = async () => {
+  if (!canEditAnimal.value) {
+    errorMessage.value =
+      "Seul le proprietaire ou un admin peut modifier cet animal.";
+    return;
+  }
+
+  if (!animal.value || !animalId.value) {
+    return;
+  }
+
+  const nextIsShared = !Boolean(animal.value.is_shared);
+
+  try {
+    isSubmitting.value = true;
+    errorMessage.value = "";
+
+    await $fetch(`${config.public.apiUrl}/animals/${animalId.value}/shared`, {
+      method: "PATCH",
+      headers: {
+        ...authHeaders.value,
+        "Content-Type": "application/json",
+      },
+      body: {
+        isShared: nextIsShared,
+      },
+    });
+
+    animal.value = {
+      ...animal.value,
+      is_shared: nextIsShared,
+    };
+
+    if (!nextIsShared) {
+      showQr.value = false;
+    }
+  } catch (error) {
+    console.error(error);
+    errorMessage.value = "Impossible de modifier le partage de cet animal.";
+  } finally {
+    isSubmitting.value = false;
+  }
+};
+
 const deleteAnimal = async () => {
+  if (!canEditAnimal.value) {
+    errorMessage.value =
+      "Seul le proprietaire ou un admin peut modifier cet animal.";
+    return;
+  }
+
   if (!animalId.value) {
     return;
   }
@@ -896,6 +1003,12 @@ const handlePictureChange = (event: Event) => {
 };
 
 const submitNewMeasurement = async () => {
+  if (!canEditAnimal.value) {
+    newMeasurementError.value =
+      "Seul le proprietaire ou un admin peut modifier cet animal.";
+    return;
+  }
+
   if (!animalId.value) {
     newMeasurementError.value = "Animal introuvable.";
     return;
@@ -1000,6 +1113,25 @@ watch(showInfo, (isOpen) => {
   }
 });
 
+watch(canEditAnimal, (canEdit) => {
+  if (canEdit) {
+    return;
+  }
+
+  showEdit.value = false;
+  showNewMeasurement.value = false;
+  showNewTreatment.value = false;
+});
+
+watch(
+  () => animal.value?.is_shared,
+  (isShared) => {
+    if (!isShared) {
+      showQr.value = false;
+    }
+  },
+);
+
 onMounted(async () => {
   isLoading.value = true;
 
@@ -1054,6 +1186,23 @@ watch(showNewTreatment, (isOpen) => {
 
         <ul>
           <li
+            v-if="canEditAnimal"
+            class="absolute top-0 -left-3 flex w-fit cursor-pointer items-center justify-center rounded-full p-1"
+            :class="isAnimalShared ? 'bg-green-300' : 'bg-grey-500'"
+            @click="toggleAnimalShared"
+          >
+            <Icon
+              :name="
+                isAnimalShared
+                  ? 'material-symbols:share-outline'
+                  : 'material-symbols:share-off-outline-rounded'
+              "
+              class="size-6 text-black"
+            />
+          </li>
+
+          <li
+            v-if="isAnimalShared"
             class="absolute top-0 -right-3 flex w-fit cursor-pointer items-center justify-center rounded-full bg-green-300 p-1"
             @click="showQr = true"
           >
@@ -1074,6 +1223,7 @@ watch(showNewTreatment, (isOpen) => {
           </li>
 
           <li
+            v-if="canEditAnimal"
             class="absolute bottom-0 -left-3 flex w-fit cursor-pointer items-center justify-center rounded-full bg-green-300 p-1"
             @click="showEdit = true"
           >
@@ -1089,6 +1239,10 @@ watch(showNewTreatment, (isOpen) => {
         <Icon name="material-symbols:calendar-today-rounded" class="size-6" />
         <p>{{ animalAge }}</p>
       </div>
+
+      <p v-if="!canEditAnimal" class="mt-2 text-sm text-gray-600">
+        Consultation en lecture seule.
+      </p>
     </figure>
 
     <BaseSection
@@ -1154,8 +1308,8 @@ watch(showNewTreatment, (isOpen) => {
 
       <BaseSection
         title="Évolution"
-        action="Nouvelle mesure"
-        plus
+        :action="canEditAnimal ? 'Nouvelle mesure' : undefined"
+        :plus="canEditAnimal"
         @action-click="showNewMeasurement = true"
         class="xl:flex xl:flex-1 xl:flex-col xl:items-stretch"
       >
@@ -1180,8 +1334,8 @@ watch(showNewTreatment, (isOpen) => {
 
     <BaseSection
       title="Traitements"
-      action="Nouveau traitement"
-      plus
+      :action="canEditAnimal ? 'Nouveau traitement' : undefined"
+      :plus="canEditAnimal"
       @action-click="showNewTreatment = true"
     >
       <div class="space-y-2">
@@ -1238,6 +1392,7 @@ watch(showNewTreatment, (isOpen) => {
     </p>
 
     <button
+      v-if="canEditAnimal"
       class="button-sm mx-auto mt-4 border shadow"
       :disabled="isSubmitting"
       @click="deleteAnimal"
@@ -1252,13 +1407,13 @@ watch(showNewTreatment, (isOpen) => {
 
   <BasePopup v-model="showQr" fit>
     <div class="flex w-full items-center justify-center">
-      <div class="size-64 h-fit lg:size-80">
+      <div v-if="isAnimalShared" class="size-64 h-fit lg:size-80">
         <Qrcode :value="qrValue" />
       </div>
     </div>
   </BasePopup>
 
-  <BasePopup v-model="showEdit">
+  <BasePopup v-if="canEditAnimal" v-model="showEdit">
     <form @submit.prevent="submitEdit">
       <h2 class="mb-2 text-center font-bold">Modifier les informations</h2>
 
@@ -1353,7 +1508,7 @@ watch(showNewTreatment, (isOpen) => {
     </form>
   </BasePopup>
 
-  <BasePopup v-model="showNewMeasurement">
+  <BasePopup v-if="canEditAnimal" v-model="showNewMeasurement">
     <form class="flex flex-col gap-4" @submit.prevent="submitNewMeasurement">
       <h2 class="text-center font-bold">Nouvelle mesure</h2>
 
@@ -1410,7 +1565,7 @@ watch(showNewTreatment, (isOpen) => {
     </form>
   </BasePopup>
 
-  <BasePopup v-model="showNewTreatment">
+  <BasePopup v-if="canEditAnimal" v-model="showNewTreatment">
     <form class="flex flex-col gap-4" @submit.prevent="submitNewTreatment">
       <h2 class="text-center font-bold">Nouveau traitement</h2>
 
