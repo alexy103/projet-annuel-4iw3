@@ -61,6 +61,51 @@ const getDefaultBreed = (speciesName: string | null): AnimalBreed | null => {
 
 const breed = ref<string | null>(null);
 
+const breedInputValue = computed({
+  get: () => breed.value ?? "",
+  set: (value: string) => {
+    const trimmed = value.trim();
+    breed.value = trimmed.length > 0 ? trimmed : null;
+  },
+});
+
+const showBreedSuggestions = ref(false);
+
+const filteredBreedOptions = computed(() => {
+  const query = breedInputValue.value.trim().toLowerCase();
+
+  if (!query) {
+    return breedOptions.value.slice(0, 8);
+  }
+
+  return breedOptions.value
+    .filter((breedOption) => breedOption.toLowerCase().includes(query))
+    .slice(0, 8);
+});
+
+const shouldShowBreedSuggestions = computed(() => {
+  return (
+    showBreedSuggestions.value &&
+    !isSpeciesEmpty.value &&
+    filteredBreedOptions.value.length > 0
+  );
+});
+
+const selectBreedOption = (breedOption: string) => {
+  breed.value = breedOption;
+  showBreedSuggestions.value = false;
+};
+
+const openBreedSuggestions = () => {
+  showBreedSuggestions.value = true;
+};
+
+const closeBreedSuggestions = () => {
+  setTimeout(() => {
+    showBreedSuggestions.value = false;
+  }, 120);
+};
+
 const birthDate = ref("");
 const adoptionDate = ref("");
 const weight = ref("");
@@ -71,12 +116,15 @@ const isLoading = ref(false);
 const isLoadingSpecies = ref(false);
 
 const getAuthHeaders = () => {
+  const authStore = useAuthStore();
   const config = useRuntimeConfig();
-  const accessToken = localStorage.getItem("accessToken");
+  const accessToken =
+    authStore.accessToken ||
+    (import.meta.client ? localStorage.getItem("accessToken") : null);
 
   return {
     "x-api-key": config.public.apiKey,
-    Authorization: `Bearer ${accessToken}`,
+    ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
   };
 };
 
@@ -85,20 +133,9 @@ const fetchSpecies = async () => {
   isLoadingSpecies.value = true;
 
   try {
-    const config = useRuntimeConfig();
-
-    const response = await fetch(`${config.public.apiUrl}/species`, {
-      method: "GET",
-      headers: getAuthHeaders(),
-    });
-
-    const result = await response.json();
-
-    if (!response.ok || !result.success) {
-      throw new Error(result.error || "Erreur lors du chargement des espèces");
-    }
-
-    speciesList.value = result.data;
+    const { apiFetch } = useApi();
+    const species = await apiFetch<Species[]>("/species");
+    speciesList.value = species;
   } catch (error) {
     errorMessage.value =
       error instanceof Error
@@ -110,7 +147,12 @@ const fetchSpecies = async () => {
 };
 
 watch(selectedSpeciesName, (newSpeciesName) => {
-  breed.value = getDefaultBreed(newSpeciesName);
+  if (!newSpeciesName) {
+    breed.value = null;
+    return;
+  }
+
+  breed.value = null;
 });
 
 onMounted(async () => {
@@ -356,23 +398,33 @@ const handleAddAnimal = async () => {
         />
       </div>
 
-      <div class="w-full max-w-48 justify-self-center">
-        <BaseSelect
-          v-if="hasBreedOptions"
+      <div class="relative w-full max-w-48 justify-self-center">
+        <label for="breed" class="mb-1 block text-center text-sm">Race</label>
+        <input
           id="breed"
-          label="Race"
-          v-model="breed"
-          :options="breedOptions"
+          v-model="breedInputValue"
           :disabled="isSpeciesEmpty"
-          addClass="w-full"
+          class="input bg-background w-full font-normal shadow placeholder:text-gray-400 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+          :class="breedInputValue ? 'text-black' : 'text-gray-400'"
+          placeholder="Saisir une race"
+          @focus="openBreedSuggestions"
+          @blur="closeBreedSuggestions"
         />
 
-        <BaseInput
-          v-else
-          v-model="breed"
-          label="Race"
-          :disabled="isSpeciesEmpty"
-        />
+        <div
+          v-if="shouldShowBreedSuggestions"
+          class="bg-background absolute z-20 mt-1 max-h-44 w-full overflow-y-auto rounded-lg border border-gray-200 shadow"
+        >
+          <button
+            v-for="breedOption in filteredBreedOptions"
+            :key="breedOption"
+            type="button"
+            class="hover:bg-grey-500 w-full cursor-pointer px-3 py-2 text-left text-sm"
+            @mousedown.prevent="selectBreedOption(breedOption)"
+          >
+            {{ breedOption }}
+          </button>
+        </div>
       </div>
     </div>
 
