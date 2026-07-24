@@ -8,13 +8,14 @@ La connexion "Continuer avec GitHub" repose sur une OAuth App GitHub. Le backend
 
 1. Aller sur [github.com/settings/developers](https://github.com/settings/developers) → **OAuth Apps** → **New OAuth App**.
 2. Renseigner :
-   - **Application name** : `Annuel (dev)` (ou ce que tu veux)
-   - **Homepage URL** : `http://localhost:3000`
-   - **Authorization callback URL** : `http://localhost:3000/auth/github/callback`
+    - **Application name** : `Annuel (dev)` (ou ce que tu veux)
+    - **Homepage URL** : `http://localhost:3000`
+    - **Authorization callback URL** : `http://localhost:3000/auth/github/callback`
 3. Valider, puis générer un **Client secret**.
 4. Récupérer le **Client ID** et le **Client secret**.
 
 En production, créer une seconde OAuth App (ou modifier l'URL) avec le domaine réel, par exemple :
+
 - Homepage URL : `https://ton-domaine.fr`
 - Authorization callback URL : `https://ton-domaine.fr/auth/github/callback`
 
@@ -77,3 +78,47 @@ cd frontend
 npx playwright install   # une seule fois, installe les navigateurs
 npm run test:e2e
 ```
+
+## Analytics Umami auto-hébergé
+
+Le projet intègre Umami auto-hébergé via Docker Compose. Le script analytics est injecté dans le frontend seulement si les variables publiques Umami sont renseignées.
+
+### 1. Configuration Docker
+
+Dans `.env` (copie de `.env.dev.example` ou `.env.prod.example`), configurer :
+
+```env
+UMAMI_PORT=3005
+UMAMI_DB_NAME=umami
+UMAMI_DB_USER=umami
+UMAMI_DB_PASSWORD=umami_password_change_me
+UMAMI_APP_SECRET=change_me_with_a_long_random_secret
+UMAMI_HASH_SALT=change_me_with_a_second_long_random_secret
+```
+
+Puis lancer la stack habituelle :
+
+```bash
+bash start.dev.sh
+```
+
+Umami sera disponible sur `http://localhost:3005`.
+
+### 2. Initialiser Umami
+
+1. Ouvrir `http://localhost:3005`.
+2. Se connecter avec les identifiants par défaut Umami (à changer ensuite dans l'interface).
+3. Créer un site et récupérer son Website ID.
+
+### 3. Brancher le frontend sur Umami
+
+Dans `frontend/.env` (voir `frontend/.env.example`) ajouter :
+
+```env
+NUXT_PUBLIC_UMAMI_WEBSITE_ID=your_website_id
+NUXT_PUBLIC_UMAMI_SCRIPT_URL=http://localhost:3005/script.js
+```
+
+Ensuite relancer le frontend pour appliquer les variables d'environnement.
+
+Si `NUXT_PUBLIC_UMAMI_WEBSITE_ID` ou `NUXT_PUBLIC_UMAMI_SCRIPT_URL` est vide, aucun script analytics n'est chargé.
