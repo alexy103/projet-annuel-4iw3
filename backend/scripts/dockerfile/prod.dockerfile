@@ -19,6 +19,7 @@ RUN npm ci --omit=dev && npm cache clean --force
 
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/migrations ./migrations
+COPY --from=build /app/src/utils/migration-helpers ./src/utils/migration-helpers
 
 RUN useradd --system --create-home --home-dir /app appuser \
     && mkdir -p /app/uploads \
