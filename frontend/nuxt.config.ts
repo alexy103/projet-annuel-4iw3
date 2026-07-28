@@ -8,10 +8,31 @@ export default defineNuxtConfig({
     apiUrl: process.env.API_URL,
     public: {
       apiBase: process.env.NUXT_PUBLIC_API_BASE || "http://localhost:3003/api",
-      apiUrl: process.env.NUXT_PUBLIC_API_URL || process.env.NUXT_PUBLIC_API_BASE || "http://localhost:3003/api",
+      apiUrl:
+        process.env.NUXT_PUBLIC_API_URL ||
+        process.env.NUXT_PUBLIC_API_BASE ||
+        "http://localhost:3003/api",
       apiKey: process.env.NUXT_PUBLIC_API_KEY || "test",
-      backendUrl: process.env.NUXT_PUBLIC_BACKEND_URL || "http://localhost:3003",
+      backendUrl:
+        process.env.NUXT_PUBLIC_BACKEND_URL || "http://localhost:3003",
       githubClientId: process.env.NUXT_PUBLIC_GITHUB_CLIENT_ID || "",
+      umamiWebsiteId: process.env.NUXT_PUBLIC_UMAMI_WEBSITE_ID || "",
+      umamiScriptUrl: process.env.NUXT_PUBLIC_UMAMI_SCRIPT_URL || "",
+    },
+  },
+  app: {
+    head: {
+      script:
+        process.env.NUXT_PUBLIC_UMAMI_WEBSITE_ID &&
+        process.env.NUXT_PUBLIC_UMAMI_SCRIPT_URL
+          ? [
+              {
+                src: process.env.NUXT_PUBLIC_UMAMI_SCRIPT_URL,
+                defer: true,
+                "data-website-id": process.env.NUXT_PUBLIC_UMAMI_WEBSITE_ID,
+              },
+            ]
+          : [],
     },
   },
   css: ["@/assets/css/main.css"],
