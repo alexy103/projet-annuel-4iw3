@@ -7,7 +7,10 @@ export default defineNuxtConfig({
   runtimeConfig: {
     // Serveur uniquement : URL interne du backend, utilisée par la route proxy
     // (server/routes/backend/[...path].ts). Jamais envoyée au navigateur.
-    backendUrl: process.env.BACKEND_URL || "http://localhost:3003",
+    // Nom NUXT_BACKEND_URL obligatoire : Nuxt ne relit une clé privée de
+    // runtimeConfig au démarrage du conteneur que si l'env var suit la
+    // convention NUXT_<CLÉ> — sinon la valeur par défaut figée au build reste.
+    backendUrl: process.env.NUXT_BACKEND_URL || "http://localhost:3003",
     public: {
       apiBase: process.env.NUXT_PUBLIC_API_BASE || "http://localhost:3003/api",
       apiUrl:
