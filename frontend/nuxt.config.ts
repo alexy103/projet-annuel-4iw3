@@ -25,21 +25,6 @@ export default defineNuxtConfig({
       umamiScriptUrl: process.env.NUXT_PUBLIC_UMAMI_SCRIPT_URL || "",
     },
   },
-  app: {
-    head: {
-      script:
-        process.env.NUXT_PUBLIC_UMAMI_WEBSITE_ID &&
-        process.env.NUXT_PUBLIC_UMAMI_SCRIPT_URL
-          ? [
-              {
-                src: process.env.NUXT_PUBLIC_UMAMI_SCRIPT_URL,
-                defer: true,
-                "data-website-id": process.env.NUXT_PUBLIC_UMAMI_WEBSITE_ID,
-              },
-            ]
-          : [],
-    },
-  },
   css: ["@/assets/css/main.css"],
   vite: {
     plugins: [tailwindcss()],
