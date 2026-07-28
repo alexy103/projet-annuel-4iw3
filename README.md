@@ -4,53 +4,96 @@
 
 La connexion "Continuer avec GitHub" repose sur une OAuth App GitHub. Le backend échange lui-même le `code` renvoyé par GitHub contre un `access_token` (le `client_secret` ne doit jamais être exposé côté frontend).
 
-### 1. Créer une OAuth App GitHub
+### En développement
 
-1. Aller sur [github.com/settings/developers](https://github.com/settings/developers) → **OAuth Apps** → **New OAuth App**.
-2. Renseigner :
-    - **Application name** : `Annuel (dev)` (ou ce que tu veux)
-    - **Homepage URL** : `http://localhost:3000`
-    - **Authorization callback URL** : `http://localhost:3000/auth/github/callback`
-3. Valider, puis générer un **Client secret**.
-4. Récupérer le **Client ID** et le **Client secret**.
+1. Créer une OAuth App GitHub :
+   - Aller sur [github.com/settings/developers](https://github.com/settings/developers) → **OAuth Apps** → **New OAuth App**.
+   - Renseigner :
+     - **Application name** : `Annuel (dev)` (ou ce que tu veux)
+     - **Homepage URL** : `http://localhost:3000`
+     - **Authorization callback URL** : `http://localhost:3000/auth/github/callback`
+   - Valider, puis générer un **Client secret**. Récupérer le **Client ID** et le **Client secret**.
 
-En production, créer une seconde OAuth App (ou modifier l'URL) avec le domaine réel, par exemple :
+2. Configurer le backend, dans `backend/.env` (voir `backend/.env.dev.example`) :
 
-- Homepage URL : `https://ton-domaine.fr`
-- Authorization callback URL : `https://ton-domaine.fr/auth/github/callback`
+   ```env
+   GITHUB_CLIENT_ID=le_client_id_github
+   GITHUB_CLIENT_SECRET=le_client_secret_github
 
-### 2. Configurer le backend
+   # Origine autorisée à appeler l'API (CORS) — l'URL du frontend
+   CORS_ORIGIN=http://localhost:3000
+   ```
 
-Dans `backend/.env` (voir `backend/.env.dev.example`) :
+3. Configurer le frontend, dans `frontend/.env` (voir `frontend/.env.example`) :
 
-```env
-GITHUB_CLIENT_ID=le_client_id_github
-GITHUB_CLIENT_SECRET=le_client_secret_github
+   ```env
+   NUXT_PUBLIC_API_BASE=http://localhost:3003/api
+   NUXT_PUBLIC_API_KEY=test
+   NUXT_PUBLIC_GITHUB_CLIENT_ID=le_client_id_github
+   ```
 
-# Origine autorisée à appeler l'API (CORS) — l'URL du frontend
-CORS_ORIGIN=http://localhost:3000
-```
+   Le `client_id` est public (il apparaît dans l'URL d'autorisation GitHub), seul le `client_secret` doit rester côté backend.
 
-### 3. Configurer le frontend
+4. Tester le flow :
+   - Lancer le backend (`npm run dev` dans `backend/`) et le frontend (`npm run dev` dans `frontend/`).
+   - Aller sur `http://localhost:3000/login` et cliquer sur **Continuer avec GitHub**.
+   - Après autorisation sur GitHub, tu es redirigé vers `/auth/github/callback` qui échange le code auprès du backend (`POST /api/auth/oauth/github`) et te connecte (ou crée le compte si c'est la première connexion avec cet e-mail GitHub).
+   - Si la double authentification (TOTP) est activée sur le compte, un code est demandé avant de finaliser la connexion.
 
-Dans `frontend/.env` (voir `frontend/.env.example`) :
+### En production
 
-```env
-NUXT_PUBLIC_API_BASE=http://localhost:3003/api
-NUXT_PUBLIC_API_KEY=test
-NUXT_PUBLIC_GITHUB_CLIENT_ID=le_client_id_github
-```
+1. Créer une **seconde** OAuth App GitHub dédiée à la prod (ou changer les URLs de celle du dev) avec le vrai domaine :
+   - Homepage URL : `https://ton-domaine.fr`
+   - Authorization callback URL : `https://ton-domaine.fr/auth/github/callback`
 
-Le `client_id` est public (il apparaît dans l'URL d'autorisation GitHub), seul le `client_secret` doit rester côté backend.
+2. Renseigner `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `CORS_ORIGIN`, `NUXT_PUBLIC_GITHUB_CLIENT_ID` dans `.env.prod.local` avec ces valeurs (voir [Déploiement en production](#déploiement-en-production)).
 
-### 4. Tester le flow
+## Analytics Umami auto-hébergé
 
-1. Lancer le backend (`npm run dev` dans `backend/`) et le frontend (`npm run dev` dans `frontend/`).
-2. Aller sur `http://localhost:3000/login` et cliquer sur **Continuer avec GitHub**.
-3. Après autorisation sur GitHub, tu es redirigé vers `/auth/github/callback` qui échange le code auprès du backend (`POST /api/auth/oauth/github`) et te connecte (ou crée le compte si c'est la première connexion avec cet e-mail GitHub).
-4. Si la double authentification (TOTP) est activée sur le compte, un code est demandé avant de finaliser la connexion.
+Le projet intègre Umami auto-hébergé via Docker Compose. Le script analytics est injecté dans le frontend seulement si les variables publiques Umami sont renseignées.
+
+### En développement
+
+1. Dans `.env` (copie de `.env.dev.example`), configurer :
+
+   ```env
+   UMAMI_PORT=3005
+   UMAMI_DB_NAME=umami
+   UMAMI_DB_USER=umami
+   UMAMI_DB_PASSWORD=umami_password_change_me
+   UMAMI_APP_SECRET=change_me_with_a_long_random_secret
+   UMAMI_HASH_SALT=change_me_with_a_second_long_random_secret
+   ```
+
+2. Lancer la stack habituelle :
+
+   ```bash
+   bash start.dev.sh
+   ```
+
+   Umami sera disponible sur `http://localhost:3005`.
+
+3. Initialiser Umami :
+   - Ouvrir `http://localhost:3005`.
+   - Se connecter avec les identifiants par défaut Umami (à changer ensuite dans l'interface).
+   - Créer un site et récupérer son Website ID.
+
+4. Brancher le frontend sur Umami, dans `frontend/.env` (voir `frontend/.env.example`) :
+
+   ```env
+   NUXT_PUBLIC_UMAMI_WEBSITE_ID=your_website_id
+   NUXT_PUBLIC_UMAMI_SCRIPT_URL=http://localhost:3005/script.js
+   ```
+
+   Puis relancer le frontend pour appliquer les variables d'environnement. Si `NUXT_PUBLIC_UMAMI_WEBSITE_ID` ou `NUXT_PUBLIC_UMAMI_SCRIPT_URL` est vide, aucun script analytics n'est chargé.
+
+### En production
+
+Pas de setup séparé : renseigner les mêmes variables `UMAMI_*` dans `.env.prod.local` (voir [Déploiement en production](#déploiement-en-production)). Umami démarre avec le reste de la stack via `./deploy.sh`, et n'est accessible que localement sur le serveur sauf si tu lui ajoutes un sous-domaine/bloc Caddy dédié.
 
 ## Lancer les tests
+
+Ces commandes servent en local et en CI, pas en prod (la CI les rejoue déjà avant chaque merge).
 
 ### Backend (Jest)
 
@@ -80,6 +123,8 @@ npm run test:e2e
 ```
 
 ## Déploiement en production
+
+Cette section ne concerne que la prod — pour tourner le projet en local, voir les sections précédentes (`npm run dev` dans `backend/` et `frontend/`, ou `bash start.dev.sh` pour l'infra Docker).
 
 La stack de prod (backend, frontend, Postgres, Umami) tourne via `prod.docker-compose.yml`, buildée à partir des Dockerfiles multi-stage de chaque app (`backend/scripts/dockerfile/prod.dockerfile`, `frontend/scripts/dockerfile/prod.dockerfile`). Aucun secret n'est copié dans les images : ils sont injectés au démarrage des conteneurs via un fichier d'env non commité.
 
@@ -111,50 +156,12 @@ Puis remplir `.env.prod.local` (clés JWT, pepper, API key, GitHub OAuth, SMTP, 
 
 Le script pull le dernier code, build les images, démarre les conteneurs et lance les migrations (`node-pg-migrate`) dans le conteneur backend. Pour les déploiements suivants (nouvelle version du code), il suffit de relancer `./deploy.sh` depuis le repo déjà cloné.
 
-### Notes de sécurité
+### 4. Exposition réseau
+
+Seul le frontend est destiné à être exposé publiquement (via Caddy/reverse proxy → `localhost:${FRONTEND_PORT}`). Le backend n'a pas besoin de sous-domaine ni d'enregistrement DNS : le navigateur ne l'appelle jamais directement, tous les appels API passent par `server/routes/backend/[...path].ts`, une route du serveur Nuxt qui relaie vers le backend en interne via le réseau Docker (`BACKEND_URL=http://backend:3003`). Le port du backend publié en `127.0.0.1` dans `prod.docker-compose.yml` sert uniquement au débogage manuel depuis le serveur (SSH).
+
+Si tu veux exposer Umami publiquement (pour que le script de tracking se charge dans les navigateurs), il lui faut son propre sous-domaine/bloc Caddy → `localhost:${UMAMI_PORT}`.
+
+### 5. Notes de sécurité
 
 - Penser à créer une OAuth App GitHub dédiée à la prod avec le vrai domaine, et à renseigner `CORS_ORIGIN` avec ce même domaine.
-
-## Analytics Umami auto-hébergé
-
-Le projet intègre Umami auto-hébergé via Docker Compose. Le script analytics est injecté dans le frontend seulement si les variables publiques Umami sont renseignées.
-
-### 1. Configuration Docker
-
-Dans `.env` (copie de `.env.dev.example` ou `.env.prod.example`), configurer :
-
-```env
-UMAMI_PORT=3005
-UMAMI_DB_NAME=umami
-UMAMI_DB_USER=umami
-UMAMI_DB_PASSWORD=umami_password_change_me
-UMAMI_APP_SECRET=change_me_with_a_long_random_secret
-UMAMI_HASH_SALT=change_me_with_a_second_long_random_secret
-```
-
-Puis lancer la stack habituelle :
-
-```bash
-bash start.dev.sh
-```
-
-Umami sera disponible sur `http://localhost:3005`.
-
-### 2. Initialiser Umami
-
-1. Ouvrir `http://localhost:3005`.
-2. Se connecter avec les identifiants par défaut Umami (à changer ensuite dans l'interface).
-3. Créer un site et récupérer son Website ID.
-
-### 3. Brancher le frontend sur Umami
-
-Dans `frontend/.env` (voir `frontend/.env.example`) ajouter :
-
-```env
-NUXT_PUBLIC_UMAMI_WEBSITE_ID=your_website_id
-NUXT_PUBLIC_UMAMI_SCRIPT_URL=http://localhost:3005/script.js
-```
-
-Ensuite relancer le frontend pour appliquer les variables d'environnement.
-
-Si `NUXT_PUBLIC_UMAMI_WEBSITE_ID` ou `NUXT_PUBLIC_UMAMI_SCRIPT_URL` est vide, aucun script analytics n'est chargé.

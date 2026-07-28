@@ -5,7 +5,9 @@ export default defineNuxtConfig({
   devtools: { enabled: false },
   devServer: { port: 3000 },
   runtimeConfig: {
-    apiUrl: process.env.API_URL,
+    // Serveur uniquement : URL interne du backend, utilisée par la route proxy
+    // (server/routes/backend/[...path].ts). Jamais envoyée au navigateur.
+    backendUrl: process.env.BACKEND_URL || "http://localhost:3003",
     public: {
       apiBase: process.env.NUXT_PUBLIC_API_BASE || "http://localhost:3003/api",
       apiUrl:
