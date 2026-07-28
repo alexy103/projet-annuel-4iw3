@@ -89,7 +89,37 @@ Le projet intègre Umami auto-hébergé via Docker Compose. Le script analytics 
 
 ### En production
 
-Pas de setup séparé : renseigner les mêmes variables `UMAMI_*` dans `.env.prod.local` (voir [Déploiement en production](#déploiement-en-production)). Umami démarre avec le reste de la stack via `./deploy.sh`, et n'est accessible que localement sur le serveur sauf si tu lui ajoutes un sous-domaine/bloc Caddy dédié.
+Les mêmes étapes qu'en développement, dans `.env.prod.local` plutôt que `.env` :
+
+1. Renseigner les variables `UMAMI_*` dans `.env.prod.local` (voir [Déploiement en production](#déploiement-en-production)) :
+
+   ```env
+   UMAMI_PORT=3005
+   UMAMI_DB_NAME=umami
+   UMAMI_DB_USER=umami
+   UMAMI_DB_PASSWORD=change_me_with_a_long_random_secret
+   UMAMI_APP_SECRET=change_me_with_a_long_random_secret
+   UMAMI_HASH_SALT=change_me_with_a_second_long_random_secret
+   ```
+
+   `UMAMI_APP_SECRET` et `UMAMI_HASH_SALT` doivent être deux valeurs aléatoires longues et différentes (ex. `openssl rand -hex 32`), sinon Umami plante au démarrage.
+
+2. Lancer `./deploy.sh`. Umami démarre avec le reste de la stack (n'est accessible que localement sur le serveur, `127.0.0.1:${UMAMI_PORT}`, sauf si tu choisis de l'exposer publiquement).
+
+3. Initialiser Umami : ouvrir l'interface (en local via un tunnel SSH, ou publiquement si exposé), se connecter avec les identifiants par défaut (`admin` / `umami`), les changer immédiatement dans **Paramètres → Profil**, puis créer un site et récupérer son Website ID.
+
+4. Compléter `.env.prod.local` :
+
+   ```env
+   NUXT_PUBLIC_UMAMI_WEBSITE_ID=your_website_id
+   NUXT_PUBLIC_UMAMI_SCRIPT_URL=https://umami.ton-domaine.fr/script.js
+   ```
+
+   Puis recréer le conteneur frontend pour appliquer les nouvelles variables :
+
+   ```bash
+   docker compose --env-file .env.prod.local -f prod.docker-compose.yml -p annuel-prod up -d --force-recreate frontend
+   ```
 
 ## Lancer les tests
 
@@ -148,6 +178,14 @@ cp .env.prod.example .env.prod.local
 
 Puis remplir `.env.prod.local` (clés JWT, pepper, API key, GitHub OAuth, SMTP, mots de passe Postgres/Umami...). Ce fichier ne doit jamais être commité (il est dans `.gitignore`).
 
+Pour toutes les valeurs de type `change_me_...` (secrets, mots de passe), génère une valeur aléatoire plutôt que de mettre un mot de passe simple — sinon certains services (Umami notamment) refusent de démarrer ou d'authentifier correctement :
+
+```bash
+openssl rand -hex 32
+```
+
+À relancer une fois par variable à remplir (`JWT_SECRET`, `JWT_REFRESH_SECRET`, `PEPPER_SECRET`, `API_KEY`, `POSTGRES_PASSWORD`, `UMAMI_APP_SECRET`, `UMAMI_HASH_SALT`, `UMAMI_DB_PASSWORD`...) — une valeur différente à chaque fois, ne réutilise pas la même partout.
+
 ### 3. Déployer
 
 ```bash
@@ -156,6 +194,21 @@ Puis remplir `.env.prod.local` (clés JWT, pepper, API key, GitHub OAuth, SMTP, 
 
 Le script pull le dernier code, build les images, démarre les conteneurs et lance les migrations (`node-pg-migrate`) dans le conteneur backend. Pour les déploiements suivants (nouvelle version du code), il suffit de relancer `./deploy.sh` depuis le repo déjà cloné.
 
-### 4. Notes de sécurité
+### 4. Appliquer un changement dans `.env.prod.local`
+
+Si tu modifies juste une variable (secret, URL...) sans changement de code, pas besoin de rebuild ni de toucher aux volumes (données Postgres, uploads conservées) — recrée juste le(s) conteneur(s) concerné(s) :
+
+```bash
+docker compose --env-file .env.prod.local -f prod.docker-compose.yml -p annuel-prod up -d --force-recreate <service>
+# ex: --force-recreate frontend, backend, ou umami
+```
+
+Ou pour tout recréer d'un coup (toujours sans toucher aux volumes) :
+
+```bash
+docker compose --env-file .env.prod.local -f prod.docker-compose.yml -p annuel-prod up -d --force-recreate
+```
+
+### 5. Notes de sécurité
 
 - Penser à créer une OAuth App GitHub dédiée à la prod avec le vrai domaine, et à renseigner `CORS_ORIGIN` avec ce même domaine.
