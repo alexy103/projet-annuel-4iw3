@@ -156,12 +156,6 @@ Puis remplir `.env.prod.local` (clés JWT, pepper, API key, GitHub OAuth, SMTP, 
 
 Le script pull le dernier code, build les images, démarre les conteneurs et lance les migrations (`node-pg-migrate`) dans le conteneur backend. Pour les déploiements suivants (nouvelle version du code), il suffit de relancer `./deploy.sh` depuis le repo déjà cloné.
 
-### 4. Exposition réseau
-
-Seul le frontend est destiné à être exposé publiquement (via Caddy/reverse proxy → `localhost:${FRONTEND_PORT}`). Le backend n'a pas besoin de sous-domaine ni d'enregistrement DNS : le navigateur ne l'appelle jamais directement, tous les appels API passent par `server/routes/backend/[...path].ts`, une route du serveur Nuxt qui relaie vers le backend en interne via le réseau Docker (`BACKEND_URL=http://backend:3003`). Le port du backend publié en `127.0.0.1` dans `prod.docker-compose.yml` sert uniquement au débogage manuel depuis le serveur (SSH).
-
-Si tu veux exposer Umami publiquement (pour que le script de tracking se charge dans les navigateurs), il lui faut son propre sous-domaine/bloc Caddy → `localhost:${UMAMI_PORT}`.
-
-### 5. Notes de sécurité
+### 4. Notes de sécurité
 
 - Penser à créer une OAuth App GitHub dédiée à la prod avec le vrai domaine, et à renseigner `CORS_ORIGIN` avec ce même domaine.
