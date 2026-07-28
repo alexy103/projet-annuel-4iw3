@@ -1,0 +1,21 @@
+name: CD
+
+on:
+  push:
+    branches: [dev]
+  workflow_dispatch:
+
+concurrency:
+  group: cd-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy on self-hosted server
+    runs-on: [self-hosted]
+    steps:
+      - name: Write .env.prod.local from secret
+        run: printf '%s' "${{ secrets.PROD_ENV }}" > /opt/animal/.env.prod.local
+
+      - name: Deploy
+        run: cd /opt/animal && ./deploy.sh
