@@ -4,5 +4,5 @@ export default defineEventHandler(async (event) => {
 
   const targetPath = Array.isArray(path) ? path.join("/") : path;
 
-  return proxyRequest(event, `${config.apiUrl}/${targetPath}`);
+  return proxyRequest(event, `${config.backendUrl}/${targetPath}`);
 });
