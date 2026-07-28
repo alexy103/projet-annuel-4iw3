@@ -79,6 +79,42 @@ npx playwright install   # une seule fois, installe les navigateurs
 npm run test:e2e
 ```
 
+## Déploiement en production
+
+La stack de prod (backend, frontend, Postgres, Umami) tourne via `prod.docker-compose.yml`, buildée à partir des Dockerfiles multi-stage de chaque app (`backend/scripts/dockerfile/prod.dockerfile`, `frontend/scripts/dockerfile/prod.dockerfile`). Aucun secret n'est copié dans les images : ils sont injectés au démarrage des conteneurs via un fichier d'env non commité.
+
+### 1. Prérequis (une seule fois)
+
+Sur le serveur :
+
+```bash
+# Docker + Docker Compose installés
+git clone <url_du_repo> annuel
+cd annuel
+```
+
+### 2. Préparer les secrets
+
+Toujours à la racine du repo :
+
+```bash
+cp .env.prod.example .env.prod.local
+```
+
+Puis remplir `.env.prod.local` (clés JWT, pepper, API key, GitHub OAuth, SMTP, mots de passe Postgres/Umami...). Ce fichier ne doit jamais être commité (il est dans `.gitignore`).
+
+### 3. Déployer
+
+```bash
+./deploy.sh
+```
+
+Le script pull le dernier code, build les images, démarre les conteneurs et lance les migrations (`node-pg-migrate`) dans le conteneur backend. Pour les déploiements suivants (nouvelle version du code), il suffit de relancer `./deploy.sh` depuis le repo déjà cloné.
+
+### Notes de sécurité
+
+- Penser à créer une OAuth App GitHub dédiée à la prod avec le vrai domaine, et à renseigner `CORS_ORIGIN` avec ce même domaine.
+
 ## Analytics Umami auto-hébergé
 
 Le projet intègre Umami auto-hébergé via Docker Compose. Le script analytics est injecté dans le frontend seulement si les variables publiques Umami sont renseignées.

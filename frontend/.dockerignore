@@ -1,0 +1,16 @@
+.env
+.env.*
+!.env.example
+
+node_modules
+.output
+.nuxt
+.nitro
+.cache
+dist
+test-results
+playwright-report
+
+.git
+.idea
+*.log

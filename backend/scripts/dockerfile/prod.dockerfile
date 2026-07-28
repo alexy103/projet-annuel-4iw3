@@ -1,19 +1,31 @@
-FROM node:22-slim
+FROM node:22-slim AS build
 
-# 1. Créér le répertoire de travail
 WORKDIR /app
 
-# 2. Copier les fichiers de config
 COPY package*.json tsconfig.json ./
+RUN npm ci
 
-# 3. Instalaltion des dépendances
-RUN npm install
+COPY src ./src
+COPY migrations ./migrations
+RUN npm run build
 
-# 4. Copier le reste du code
-COPY . .
+FROM node:22-slim AS runtime
 
-# 5. Exposer le port interne
+ENV NODE_ENV=production
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm ci --omit=dev && npm cache clean --force
+
+COPY --from=build /app/dist ./dist
+COPY --from=build /app/migrations ./migrations
+
+RUN useradd --system --create-home --home-dir /app appuser \
+    && mkdir -p /app/uploads \
+    && chown -R appuser:appuser /app
+
+USER appuser
+
 EXPOSE 3003
 
-# 6. Lancer en dev avec hot reload
-CMD ["npm", "run", "dev"]
+CMD ["node", "dist/server.js"]
