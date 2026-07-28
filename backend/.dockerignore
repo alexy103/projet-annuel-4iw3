@@ -1,0 +1,13 @@
+.env
+.env.*
+!.env.dev.example
+
+node_modules
+dist
+coverage
+docker_data
+uploads
+
+.git
+.idea
+*.log
