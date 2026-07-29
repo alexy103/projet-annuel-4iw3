@@ -80,9 +80,13 @@ watch(value, (selectedDate) => {
     color="success"
     :week-starts-on="1"
     weekday-format="short"
+    :prev-year="{ class: 'cursor-pointer' }"
+    :prev-month="{ class: 'cursor-pointer' }"
+    :next-month="{ class: 'cursor-pointer' }"
+    :next-year="{ class: 'cursor-pointer' }"
     :ui="{
       headCell: 'text-black',
-      cellTrigger: 'data-[selected]:bg-transparent',
+      cellTrigger: 'cursor-pointer data-[selected]:bg-transparent',
     }"
   >
     <template #day="{ day }">
