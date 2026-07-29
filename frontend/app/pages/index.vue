@@ -118,14 +118,6 @@ const upcomingAppointments = computed<UpcomingAppointmentCard[]>(() => {
     }));
 });
 
-const showUpcomingSection = computed(() => {
-  return (
-    isLoadingAppointments.value ||
-    appointmentsErrorMessage.value.length > 0 ||
-    upcomingAppointments.value.length > 0
-  );
-});
-
 const fetchAppointmentsData = async () => {
   appointmentsErrorMessage.value = "";
   isLoadingAppointments.value = true;
@@ -211,12 +203,7 @@ const handleProfilePictureUpload = (event: Event) => {
       Bienvenue, {{ userStore.firstName }} !
     </h1>
 
-    <BaseSection
-      v-if="showUpcomingSection"
-      title="À venir"
-      action="Tout voir"
-      link="/calendar"
-    >
+    <BaseSection title="À venir" action="Tout voir" link="/calendar">
       <div class="-mx-4 flex gap-2 overflow-x-auto px-4">
         <div v-if="isLoadingAppointments" class="py-2 text-sm text-gray-600">
           Chargement des rendez-vous...
@@ -229,19 +216,22 @@ const handleProfilePictureUpload = (event: Event) => {
           {{ appointmentsErrorMessage }}
         </div>
 
-        <Appointment
-          v-for="appointment in upcomingAppointments"
-          v-else
-          :key="appointment.id"
-          compact
-          :id="appointment.id"
-          :animal="appointment.animal"
-          :type="appointment.type"
-          :date="appointment.date"
-          :time="appointment.time"
-          :clinic="appointment.clinic"
-          :today="appointment.isToday"
-        />
+        <template v-else-if="upcomingAppointments.length > 0">
+          <Appointment
+            v-for="appointment in upcomingAppointments"
+            :key="appointment.id"
+            compact
+            :id="appointment.id"
+            :animal="appointment.animal"
+            :type="appointment.type"
+            :date="appointment.date"
+            :time="appointment.time"
+            :clinic="appointment.clinic"
+            :today="appointment.isToday"
+          />
+        </template>
+
+        <p v-else class="py-2 text-sm text-gray-600">Aucun rendez-vous à venir.</p>
       </div>
     </BaseSection>
 

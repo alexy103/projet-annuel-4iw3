@@ -416,14 +416,6 @@ const upcomingAppointments = computed<UpcomingAppointmentCard[]>(() => {
     }));
 });
 
-const showUpcomingSection = computed(() => {
-  return (
-    isLoadingAppointments.value ||
-    appointmentsErrorMessage.value.length > 0 ||
-    upcomingAppointments.value.length > 0
-  );
-});
-
 const treatmentTypeOptions = computed(() => {
   return treatmentTypes.value.map((type) => ({
     value: String(type.id),
@@ -1245,12 +1237,7 @@ watch(showNewTreatment, (isOpen) => {
       </p>
     </figure>
 
-    <BaseSection
-      v-if="showUpcomingSection"
-      title="À venir"
-      action="Tout voir"
-      link="/calendar"
-    >
+    <BaseSection title="À venir" action="Tout voir" link="/calendar">
       <div class="-mx-4 flex gap-2 overflow-x-auto px-4">
         <div v-if="isLoadingAppointments" class="py-2 text-sm text-gray-600">
           Chargement des rendez-vous...
@@ -1263,20 +1250,23 @@ watch(showNewTreatment, (isOpen) => {
           {{ appointmentsErrorMessage }}
         </div>
 
-        <Appointment
-          v-for="appointment in upcomingAppointments"
-          v-else
-          :key="appointment.id"
-          compact
-          hide-animal
-          :id="appointment.id"
-          :animal="appointment.animal"
-          :type="appointment.type"
-          :date="appointment.date"
-          :time="appointment.time"
-          :clinic="appointment.clinic"
-          :today="appointment.isToday"
-        />
+        <template v-else-if="upcomingAppointments.length > 0">
+          <Appointment
+            v-for="appointment in upcomingAppointments"
+            :key="appointment.id"
+            compact
+            hide-animal
+            :id="appointment.id"
+            :animal="appointment.animal"
+            :type="appointment.type"
+            :date="appointment.date"
+            :time="appointment.time"
+            :clinic="appointment.clinic"
+            :today="appointment.isToday"
+          />
+        </template>
+
+        <p v-else class="py-2 text-sm text-gray-600">Aucun rendez-vous à venir.</p>
       </div>
     </BaseSection>
 
