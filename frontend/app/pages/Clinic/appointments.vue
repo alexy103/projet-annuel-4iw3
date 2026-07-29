@@ -49,6 +49,30 @@ const veterinarianLabels = computed(() =>
 const getDatePart = (rawDate: string) =>
   rawDate.includes("T") ? (rawDate.split("T")[0] ?? rawDate) : rawDate;
 
+const formatDateFr = (rawDate: string): string => {
+  const [year = 1970, month = 1, day = 1] = getDatePart(rawDate)
+    .split("-")
+    .map(Number);
+
+  return new Intl.DateTimeFormat("fr-FR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(new Date(year, month - 1, day));
+};
+
+const animalLabel = (appt: Appointment): string => {
+  const name = appt.animal_name?.trim();
+  return name && name.length > 0 ? name : `Animal #${appt.animal_id}`;
+};
+
+const ownerLabel = (appt: Appointment): string => {
+  const firstName = appt.owner_first_name?.trim() ?? "";
+  const lastName = appt.owner_last_name?.trim() ?? "";
+  const fullName = `${firstName} ${lastName}`.trim();
+  return fullName.length > 0 ? fullName : `Propriétaire #${appt.user_id}`;
+};
+
 const reasonLabel = (reasonId: number) =>
   reasons.value.find((reason) => reason.id === reasonId)?.label ??
   "Consultation";
@@ -340,7 +364,10 @@ onMounted(loadAppointments);
           <div>
             <p class="text-lg font-bold">{{ reasonLabel(appt.reason_id) }}</p>
             <p class="text-sm text-gray-400">
-              {{ getDatePart(appt.date) }} à {{ appt.time.slice(0, 5) }}
+              {{ formatDateFr(appt.date) }} à {{ appt.time.slice(0, 5) }}
+            </p>
+            <p class="text-sm text-gray-500">
+              {{ animalLabel(appt) }} • {{ ownerLabel(appt) }}
             </p>
           </div>
           <div class="flex flex-col items-end gap-2">
@@ -373,8 +400,16 @@ onMounted(loadAppointments);
             <div>
               <p class="text-gray-400">Date & heure</p>
               <p class="font-bold">
-                {{ getDatePart(appt.date) }} à {{ appt.time.slice(0, 5) }}
+                {{ formatDateFr(appt.date) }} à {{ appt.time.slice(0, 5) }}
               </p>
+            </div>
+            <div>
+              <p class="text-gray-400">Animal</p>
+              <p class="font-bold">{{ animalLabel(appt) }}</p>
+            </div>
+            <div>
+              <p class="text-gray-400">Propriétaire</p>
+              <p class="font-bold">{{ ownerLabel(appt) }}</p>
             </div>
           </div>
 

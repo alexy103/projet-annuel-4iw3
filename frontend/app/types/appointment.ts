@@ -10,6 +10,9 @@ export interface Appointment {
   user_id: number;
   animal_id: number;
   clinic_id: number;
+  animal_name?: string;
+  owner_first_name?: string;
+  owner_last_name?: string;
   remark?: string;
   created_at: string;
   updated_at: string;
