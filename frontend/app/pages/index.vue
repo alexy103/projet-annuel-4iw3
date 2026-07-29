@@ -231,7 +231,9 @@ const handleProfilePictureUpload = (event: Event) => {
           />
         </template>
 
-        <p v-else class="py-2 text-sm text-gray-600">Aucun rendez-vous à venir.</p>
+        <p v-else class="py-2 text-sm text-gray-600">
+          Aucun rendez-vous à venir.
+        </p>
       </div>
     </BaseSection>
 
