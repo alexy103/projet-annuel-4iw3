@@ -67,6 +67,13 @@ const quickLinks = [
     color: "bg-[#15D98B]",
   },
   {
+    label: "Horaires d'ouverture",
+    description: "Définir les créneaux de rendez-vous",
+    icon: "material-symbols:schedule",
+    to: "/clinic/availabilities",
+    color: "bg-[#31C6D0]",
+  },
+  {
     label: "Nos vétérinaires",
     description: "Gérer l'équipe médicale",
     icon: "material-symbols:stethoscope",
