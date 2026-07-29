@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { Clinic } from "~/types/clinic";
 import type { Appointment, AppointmentReason } from "~/types/appointment";
+import type { Consultation } from "~/types/consultation";
 import type { Veterinarian } from "~/types/veterinarian";
 
 definePageMeta({
@@ -10,7 +11,7 @@ definePageMeta({
 const { apiFetch } = useApi();
 const { fetchClinics } = useClinics();
 const { fetchByClinic } = useVeterinarians();
-const { createConsultation } = useConsultations();
+const { createConsultation, fetchByAppointment } = useConsultations();
 
 const clinicId = ref<number | null>(null);
 const appointments = ref<Appointment[]>([]);
@@ -35,6 +36,11 @@ const consultationSummary = ref("");
 const consultationPrescription = ref("");
 const isSubmittingConsultation = ref(false);
 const consultationError = ref("");
+const consultationsByAppointmentId = ref<Record<number, Consultation | null>>(
+  {},
+);
+const consultationLoadingByAppointmentId = ref<Record<number, boolean>>({});
+const consultationErrorByAppointmentId = ref<Record<number, string>>({});
 
 const veterinarianLabels = computed(() =>
   veterinarians.value.map((vet) => `${vet.first_name} ${vet.last_name}`),
@@ -44,7 +50,8 @@ const getDatePart = (rawDate: string) =>
   rawDate.includes("T") ? (rawDate.split("T")[0] ?? rawDate) : rawDate;
 
 const reasonLabel = (reasonId: number) =>
-  reasons.value.find((reason) => reason.id === reasonId)?.label ?? "Consultation";
+  reasons.value.find((reason) => reason.id === reasonId)?.label ??
+  "Consultation";
 
 const statusLabel = (appt: Appointment) => {
   if (appt.is_refused) return "Refusé";
@@ -72,10 +79,14 @@ const filtered = computed(() => {
   });
 
   if (activeTab.value === "pending") {
-    return sorted.filter((appointment) => !appointment.is_accepted && !isSettled(appointment));
+    return sorted.filter(
+      (appointment) => !appointment.is_accepted && !isSettled(appointment),
+    );
   }
   if (activeTab.value === "upcoming") {
-    return sorted.filter((appointment) => appointment.is_accepted && !isSettled(appointment));
+    return sorted.filter(
+      (appointment) => appointment.is_accepted && !isSettled(appointment),
+    );
   }
   return sorted.filter((appointment) => isSettled(appointment));
 });
@@ -100,7 +111,9 @@ const loadAppointments = async () => {
     veterinarians.value = clinicVeterinarians;
   } catch (error) {
     errorMessage.value =
-      error instanceof Error ? error.message : "Impossible de charger les rendez-vous";
+      error instanceof Error
+        ? error.message
+        : "Impossible de charger les rendez-vous";
   } finally {
     isLoading.value = false;
   }
@@ -108,6 +121,66 @@ const loadAppointments = async () => {
 
 const toggleDetail = (id: number) => {
   selectedAppointment.value = selectedAppointment.value === id ? null : id;
+
+  if (selectedAppointment.value === id) {
+    void ensureConsultationLoaded(id);
+  }
+};
+
+const ensureConsultationLoaded = async (appointmentId: number) => {
+  if (consultationLoadingByAppointmentId.value[appointmentId]) {
+    return;
+  }
+
+  if (appointmentId in consultationsByAppointmentId.value) {
+    return;
+  }
+
+  consultationLoadingByAppointmentId.value = {
+    ...consultationLoadingByAppointmentId.value,
+    [appointmentId]: true,
+  };
+
+  consultationErrorByAppointmentId.value = {
+    ...consultationErrorByAppointmentId.value,
+    [appointmentId]: "",
+  };
+
+  try {
+    const consultation = await fetchByAppointment(appointmentId);
+    consultationsByAppointmentId.value = {
+      ...consultationsByAppointmentId.value,
+      [appointmentId]: consultation,
+    };
+  } catch (error) {
+    const status =
+      typeof error === "object" &&
+      error !== null &&
+      "status" in error &&
+      typeof (error as { status?: unknown }).status === "number"
+        ? (error as { status: number }).status
+        : undefined;
+    const isNotFound = status === 404;
+
+    consultationsByAppointmentId.value = {
+      ...consultationsByAppointmentId.value,
+      [appointmentId]: null,
+    };
+
+    consultationErrorByAppointmentId.value = {
+      ...consultationErrorByAppointmentId.value,
+      [appointmentId]: isNotFound
+        ? ""
+        : error instanceof Error
+          ? error.message
+          : "Impossible de charger la consultation",
+    };
+  } finally {
+    consultationLoadingByAppointmentId.value = {
+      ...consultationLoadingByAppointmentId.value,
+      [appointmentId]: false,
+    };
+  }
 };
 
 const openConsultation = (appointment: Appointment) => {
@@ -125,14 +198,18 @@ const closeConsultation = () => {
 const submitConsultation = async () => {
   const appointment = consultationAppointment.value;
   const veterinarian = veterinarians.value.find(
-    (vet) => `${vet.first_name} ${vet.last_name}` === consultationVeterinarian.value,
+    (vet) =>
+      `${vet.first_name} ${vet.last_name}` === consultationVeterinarian.value,
   );
 
   if (!appointment || !veterinarian) {
     consultationError.value = "Le vétérinaire est obligatoire";
     return;
   }
-  if (!consultationSummary.value.trim() || !consultationPrescription.value.trim()) {
+  if (
+    !consultationSummary.value.trim() ||
+    !consultationPrescription.value.trim()
+  ) {
     consultationError.value = "Le résumé et la prescription sont obligatoires";
     return;
   }
@@ -140,12 +217,17 @@ const submitConsultation = async () => {
   isSubmittingConsultation.value = true;
   consultationError.value = "";
   try {
-    await createConsultation({
+    const createdConsultation = await createConsultation({
       veterinarian_id: veterinarian.id,
       summary: consultationSummary.value.trim(),
       prescription: consultationPrescription.value.trim(),
       appointment_id: appointment.id,
     });
+
+    consultationsByAppointmentId.value = {
+      ...consultationsByAppointmentId.value,
+      [appointment.id]: createdConsultation,
+    };
 
     const updated = await apiFetch<Appointment>(
       `/appointments/${appointment.id}/completed`,
@@ -156,7 +238,9 @@ const submitConsultation = async () => {
     closeConsultation();
   } catch (error) {
     consultationError.value =
-      error instanceof Error ? error.message : "Impossible d'enregistrer la consultation";
+      error instanceof Error
+        ? error.message
+        : "Impossible d'enregistrer la consultation";
   } finally {
     isSubmittingConsultation.value = false;
   }
@@ -227,7 +311,11 @@ onMounted(loadAppointments);
         v-for="tab in tabs"
         :key="tab.key"
         class="rounded-full px-4 py-2 text-sm font-bold transition-colors duration-200"
-        :class="activeTab === tab.key ? 'bg-[#15D98B] text-white' : 'bg-gray-200 text-black'"
+        :class="
+          activeTab === tab.key
+            ? 'bg-[#15D98B] text-white'
+            : 'bg-gray-200 text-black'
+        "
         @click="activeTab = tab.key as 'pending' | 'upcoming' | 'past'"
       >
         {{ tab.label }}
@@ -243,14 +331,14 @@ onMounted(loadAppointments);
       <div
         v-for="appt in filtered"
         :key="appt.id"
-        class="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden"
+        class="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm"
       >
         <div
-          class="flex items-center justify-between p-4 cursor-pointer"
+          class="flex cursor-pointer items-center justify-between p-4"
           @click="toggleDetail(appt.id)"
         >
           <div>
-            <p class="font-bold text-lg">{{ reasonLabel(appt.reason_id) }}</p>
+            <p class="text-lg font-bold">{{ reasonLabel(appt.reason_id) }}</p>
             <p class="text-sm text-gray-400">
               {{ getDatePart(appt.date) }} à {{ appt.time.slice(0, 5) }}
             </p>
@@ -263,7 +351,11 @@ onMounted(loadAppointments);
               {{ statusLabel(appt) }}
             </span>
             <Icon
-              :name="selectedAppointment === appt.id ? 'material-symbols:keyboard-arrow-up' : 'material-symbols:keyboard-arrow-down'"
+              :name="
+                selectedAppointment === appt.id
+                  ? 'material-symbols:keyboard-arrow-up'
+                  : 'material-symbols:keyboard-arrow-down'
+              "
               class="size-5 text-gray-400"
             />
           </div>
@@ -271,7 +363,7 @@ onMounted(loadAppointments);
 
         <div
           v-if="selectedAppointment === appt.id"
-          class="border-t border-gray-100 px-4 pb-4 pt-3 space-y-3"
+          class="space-y-3 border-t border-gray-100 px-4 pt-3 pb-4"
         >
           <div class="grid grid-cols-2 gap-2 text-sm">
             <div>
@@ -291,7 +383,43 @@ onMounted(loadAppointments);
             <p class="text-sm font-bold">{{ appt.remark }}</p>
           </div>
 
-          <div v-if="!appt.is_accepted && !isSettled(appt)" class="flex gap-2 pt-1">
+          <div
+            v-if="consultationLoadingByAppointmentId[appt.id]"
+            class="text-sm text-gray-400"
+          >
+            Chargement de la consultation...
+          </div>
+
+          <div
+            v-else-if="consultationErrorByAppointmentId[appt.id]"
+            class="text-sm text-red-500"
+          >
+            {{ consultationErrorByAppointmentId[appt.id] }}
+          </div>
+
+          <div
+            v-else-if="consultationsByAppointmentId[appt.id]"
+            class="space-y-2 rounded-xl border border-gray-100 bg-gray-50 p-3"
+          >
+            <div>
+              <p class="text-sm text-gray-400">Résumé</p>
+              <p class="text-sm font-bold">
+                {{ consultationsByAppointmentId[appt.id]?.summary }}
+              </p>
+            </div>
+
+            <div>
+              <p class="text-sm text-gray-400">Prescription</p>
+              <p class="text-sm font-bold">
+                {{ consultationsByAppointmentId[appt.id]?.prescription }}
+              </p>
+            </div>
+          </div>
+
+          <div
+            v-if="!appt.is_accepted && !isSettled(appt)"
+            class="flex gap-2 pt-1"
+          >
             <button
               :disabled="updatingId === appt.id"
               class="rounded-full bg-[#15D98B] px-4 py-2 text-sm font-bold text-white transition-transform duration-200 hover:scale-105 disabled:opacity-50"
@@ -308,7 +436,10 @@ onMounted(loadAppointments);
             </button>
           </div>
 
-          <div v-else-if="appt.is_accepted && !isSettled(appt)" class="flex gap-2 pt-1">
+          <div
+            v-else-if="appt.is_accepted && !isSettled(appt)"
+            class="flex gap-2 pt-1"
+          >
             <button
               :disabled="updatingId === appt.id"
               class="rounded-full bg-[#15D98B] px-4 py-2 text-sm font-bold text-white transition-transform duration-200 hover:scale-105 disabled:opacity-50"
@@ -327,12 +458,19 @@ onMounted(loadAppointments);
         </div>
       </div>
 
-      <p v-if="!isLoading && filtered.length === 0" class="text-center text-gray-400">
+      <p
+        v-if="!isLoading && filtered.length === 0"
+        class="text-center text-gray-400"
+      >
         Aucun rendez-vous dans cette catégorie.
       </p>
     </div>
 
-    <BasePopup :model-value="!!consultationAppointment" fit @update:model-value="closeConsultation">
+    <BasePopup
+      :model-value="!!consultationAppointment"
+      fit
+      @update:model-value="closeConsultation"
+    >
       <form @submit.prevent="submitConsultation" class="w-72 space-y-4">
         <p class="text-center font-bold">Réaliser le rendez-vous</p>
 

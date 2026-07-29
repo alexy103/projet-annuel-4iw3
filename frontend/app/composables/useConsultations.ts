@@ -4,7 +4,7 @@ export function useConsultations() {
   const { apiFetch } = useApi();
 
   const fetchByAppointment = (appointmentId: number) =>
-    apiFetch<Consultation[]>(`/consultations/appointment/${appointmentId}`);
+    apiFetch<Consultation>(`/consultations/appointment/${appointmentId}`);
 
   const createConsultation = (payload: ConsultationPayload) =>
     apiFetch<Consultation>("/consultations", {

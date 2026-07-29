@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import type { Consultation } from "~/types/consultation";
+
 type ApiResponse<T> = {
   success: boolean;
   data: T;
@@ -76,12 +78,16 @@ type AppointmentDetails = {
 };
 
 const route = useRoute();
+const { fetchByAppointment } = useConsultations();
 
 const appointment = ref<AppointmentDetails | null>(null);
 const rawAppointment = ref<ApiAppointment | null>(null);
+const consultation = ref<Consultation | null>(null);
 const isLoading = ref(true);
+const isLoadingConsultation = ref(false);
 const isSaving = ref(false);
 const errorMessage = ref("");
+const consultationErrorMessage = ref("");
 const saveErrorMessage = ref("");
 const isCancelling = ref(false);
 const cancelErrorMessage = ref("");
@@ -361,9 +367,38 @@ const buildAppointmentDateTime = (rawDate: string, rawTime: string): Date => {
   return new Date(year, month - 1, day, hours, minutes);
 };
 
+const fetchConsultationDetails = async (appointmentId: number) => {
+  consultation.value = null;
+  consultationErrorMessage.value = "";
+  isLoadingConsultation.value = true;
+
+  try {
+    consultation.value = await fetchByAppointment(appointmentId);
+  } catch (error) {
+    const status =
+      typeof error === "object" &&
+      error !== null &&
+      "status" in error &&
+      typeof (error as { status?: unknown }).status === "number"
+        ? (error as { status: number }).status
+        : undefined;
+
+    if (status !== 404) {
+      consultationErrorMessage.value =
+        error instanceof Error
+          ? error.message
+          : "Impossible de charger la consultation";
+    }
+  } finally {
+    isLoadingConsultation.value = false;
+  }
+};
+
 const fetchAppointmentDetails = async () => {
   errorMessage.value = "";
   saveErrorMessage.value = "";
+  consultation.value = null;
+  consultationErrorMessage.value = "";
   isLoading.value = true;
 
   try {
@@ -393,6 +428,8 @@ const fetchAppointmentDetails = async () => {
 
     const appointmentData = appointmentResult.data;
     rawAppointment.value = appointmentData;
+
+    await fetchConsultationDetails(appointmentData.id);
 
     const [animalResult, clinicResult, reasonResult] = await Promise.allSettled(
       [
@@ -537,7 +574,10 @@ const appointmentStatusClass = computed(() => {
     return "bg-gray-400";
   }
 
-  if (appointmentStatus.value === "Annulé" || appointmentStatus.value === "Refusé") {
+  if (
+    appointmentStatus.value === "Annulé" ||
+    appointmentStatus.value === "Refusé"
+  ) {
     return "bg-red-500";
   }
 
@@ -780,6 +820,39 @@ const cancelAppointment = async () => {
           <p v-else class="font-bold">
             {{ appointment.notes || "Aucune remarque" }}
           </p>
+        </div>
+
+        <div class="rounded-xl bg-white p-4">
+          <p class="text-sm text-gray-500">Consultation</p>
+
+          <p v-if="isLoadingConsultation" class="mt-1 text-sm text-gray-600">
+            Chargement de la consultation...
+          </p>
+
+          <p
+            v-else-if="consultationErrorMessage"
+            class="mt-1 text-sm text-red-600"
+          >
+            {{ consultationErrorMessage }}
+          </p>
+
+          <div v-else-if="consultation" class="mt-2 space-y-3">
+            <div>
+              <p class="text-sm text-gray-500">Résumé</p>
+              <p class="font-bold whitespace-pre-line">
+                {{ consultation.summary || "Aucun résumé" }}
+              </p>
+            </div>
+
+            <div>
+              <p class="text-sm text-gray-500">Prescription</p>
+              <p class="font-bold whitespace-pre-line">
+                {{ consultation.prescription || "Aucune prescription" }}
+              </p>
+            </div>
+          </div>
+
+          <p v-else class="mt-1 font-bold">Aucune consultation enregistrée</p>
         </div>
 
         <p v-if="saveErrorMessage" class="text-center text-sm text-red-600">
