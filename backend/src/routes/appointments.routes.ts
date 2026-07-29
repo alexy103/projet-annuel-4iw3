@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { requireApiKey, requireAuth } from "../middlewares";
 import {
+  cancelAppointment,
   createAppointment,
   deleteAppointment,
   getAppointmentById,
@@ -71,6 +72,13 @@ appointmentsRouter.patch(
   requireApiKey,
   requireAuth("admin", "clinic"),
   toggleAppointmentIsCompleted,
+);
+
+appointmentsRouter.patch(
+  "/:appointmentId/cancelled",
+  requireApiKey,
+  requireAuth("admin", "clinic", "user"),
+  cancelAppointment,
 );
 
 appointmentsRouter.delete(

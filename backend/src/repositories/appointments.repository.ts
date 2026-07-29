@@ -92,6 +92,26 @@ class AppointmentRepository extends BaseRepository<Appointment, CreateAppointmen
 
     return appointment;
   }
+
+  /**
+   * Update is_cancelled status of an appointment
+   * @param appointmentId
+   * @param isCancelled
+   */
+  async updateIsCancelled(appointmentId: number, isCancelled: boolean): Promise<Appointment> {
+    const result = await db.query<Appointment>(
+      `UPDATE ${this.table} SET
+               is_cancelled = $1,
+               updated_at = NOW()
+             WHERE id = $2 RETURNING *`,
+      [isCancelled, appointmentId],
+    );
+
+    const appointment: Appointment | undefined = result.rows[0];
+    if (!appointment) throw new AppError("Appointment is_cancelled update failed", 400);
+
+    return appointment;
+  }
 }
 
 export const appointmentsRepository = new AppointmentRepository();

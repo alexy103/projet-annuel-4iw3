@@ -4,6 +4,7 @@ export interface Appointment {
   time: string;
   reason_id: number;
   is_completed: boolean;
+  is_cancelled: boolean;
   user_id: number;
   animal_id: number;
   clinic_id: number;

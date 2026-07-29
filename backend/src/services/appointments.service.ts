@@ -71,6 +71,13 @@ function toDateOnlyString(date: Date | string): string {
 	return toValidDate(date).toISOString().substring(0, 10);
 }
 
+function isInPast(date: Date | string, time: string): boolean {
+	const dateObj = toValidDate(date);
+	const [h = 0, m = 0] = time.split(':').map(Number);
+	dateObj.setUTCHours(h, m, 0, 0);
+	return dateObj.getTime() < Date.now();
+}
+
 function validateSlot(date: Date | string, time: string, availability: Availability): void {
 	const rules = availability.slot_rules as { break?: { start: number; end: number }; interval: number };
 
@@ -236,6 +243,23 @@ export const appointmentService = {
 		}
 
 		return appointmentsRepository.updateIsCompleted(appointmentId, isCompleted);
+	},
+
+	async setIsCancelled(appointmentId: number, callerId: number, role: string, callerClinicId?: number): Promise<Appointment> {
+		const existingAppointment: Appointment = await appointmentsRepository.findById(appointmentId);
+		if (!existingAppointment) throw new AppError('Appointment not found', 404);
+
+		if (role === 'user' && existingAppointment.user_id !== callerId) throw new AppError('Access denied', 403);
+		if (role === 'clinic' && existingAppointment.clinic_id !== callerClinicId) throw new AppError('Access denied', 403);
+
+		if (existingAppointment.is_cancelled) throw new AppError('Appointment already cancelled', 409);
+		if (existingAppointment.is_completed) throw new AppError('Cannot cancel a completed appointment', 409);
+
+		if (role === 'user' && isInPast(existingAppointment.date, existingAppointment.time)) {
+			throw new AppError('Cannot cancel a past appointment', 409);
+		}
+
+		return appointmentsRepository.updateIsCancelled(appointmentId, true);
 	},
 
 	async delete(appointmentId: number, role: string, callerClinicId?: number): Promise<Appointment> {
