@@ -92,6 +92,64 @@ class AppointmentRepository extends BaseRepository<Appointment, CreateAppointmen
 
     return appointment;
   }
+
+  /**
+   * Update is_cancelled status of an appointment
+   * @param appointmentId
+   * @param isCancelled
+   */
+  async updateIsCancelled(appointmentId: number, isCancelled: boolean): Promise<Appointment> {
+    const result = await db.query<Appointment>(
+      `UPDATE ${this.table} SET
+               is_cancelled = $1,
+               updated_at = NOW()
+             WHERE id = $2 RETURNING *`,
+      [isCancelled, appointmentId],
+    );
+
+    const appointment: Appointment | undefined = result.rows[0];
+    if (!appointment) throw new AppError("Appointment is_cancelled update failed", 400);
+
+    return appointment;
+  }
+
+  /**
+   * Mark an appointment as accepted by the clinic
+   * @param appointmentId
+   */
+  async updateIsAccepted(appointmentId: number): Promise<Appointment> {
+    const result = await db.query<Appointment>(
+      `UPDATE ${this.table} SET
+               is_accepted = TRUE,
+               updated_at = NOW()
+             WHERE id = $1 RETURNING *`,
+      [appointmentId],
+    );
+
+    const appointment: Appointment | undefined = result.rows[0];
+    if (!appointment) throw new AppError("Appointment is_accepted update failed", 400);
+
+    return appointment;
+  }
+
+  /**
+   * Mark an appointment as refused by the clinic
+   * @param appointmentId
+   */
+  async updateIsRefused(appointmentId: number): Promise<Appointment> {
+    const result = await db.query<Appointment>(
+      `UPDATE ${this.table} SET
+               is_refused = TRUE,
+               updated_at = NOW()
+             WHERE id = $1 RETURNING *`,
+      [appointmentId],
+    );
+
+    const appointment: Appointment | undefined = result.rows[0];
+    if (!appointment) throw new AppError("Appointment is_refused update failed", 400);
+
+    return appointment;
+  }
 }
 
 export const appointmentsRepository = new AppointmentRepository();

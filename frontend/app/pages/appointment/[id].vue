@@ -11,6 +11,9 @@ type ApiAppointment = {
   time: string;
   reason_id: number;
   is_completed: boolean;
+  is_cancelled: boolean;
+  is_accepted: boolean;
+  is_refused: boolean;
   user_id: number;
   animal_id: number;
   clinic_id: number;
@@ -68,7 +71,7 @@ type AppointmentDetails = {
   clinic: string;
   address: string;
   veterinarian: string;
-  status: "En attente" | "Terminé";
+  status: "En attente" | "Confirmé" | "Terminé" | "Annulé" | "Refusé";
   notes: string;
 };
 
@@ -80,6 +83,8 @@ const isLoading = ref(true);
 const isSaving = ref(false);
 const errorMessage = ref("");
 const saveErrorMessage = ref("");
+const isCancelling = ref(false);
+const cancelErrorMessage = ref("");
 
 const isEditing = ref(false);
 const editedDate = ref("");
@@ -454,7 +459,15 @@ const fetchAppointmentDetails = async () => {
       clinic: clinicName,
       address: clinicAddress,
       veterinarian: "Non renseigné",
-      status: isFinished ? "Terminé" : "En attente",
+      status: appointmentData.is_refused
+        ? "Refusé"
+        : appointmentData.is_cancelled
+          ? "Annulé"
+          : isFinished
+            ? "Terminé"
+            : appointmentData.is_accepted
+              ? "Confirmé"
+              : "En attente",
       notes: appointmentData.remark || "",
     };
 
@@ -481,8 +494,30 @@ const isFinishedAppointment = computed(() => {
   return appointment.value.status === "Terminé";
 });
 
+const isCancelledAppointment = computed(() => {
+  return appointment.value?.status === "Annulé";
+});
+
+const isRefusedAppointment = computed(() => {
+  return appointment.value?.status === "Refusé";
+});
+
 const canEditAppointment = computed(() => {
-  return !isFinishedAppointment.value && !isSaving.value;
+  return (
+    !isFinishedAppointment.value &&
+    !isCancelledAppointment.value &&
+    !isRefusedAppointment.value &&
+    !isSaving.value
+  );
+});
+
+const canCancelAppointment = computed(() => {
+  return (
+    !isFinishedAppointment.value &&
+    !isCancelledAppointment.value &&
+    !isRefusedAppointment.value &&
+    !isCancelling.value
+  );
 });
 
 const appointmentStatus = computed(() => {
@@ -502,8 +537,12 @@ const appointmentStatusClass = computed(() => {
     return "bg-gray-400";
   }
 
+  if (appointmentStatus.value === "Annulé" || appointmentStatus.value === "Refusé") {
+    return "bg-red-500";
+  }
+
   if (appointmentStatus.value === "En attente") {
-    return "bg-blue-500";
+    return "bg-yellow-500";
   }
 
   return "bg-green-500";
@@ -590,6 +629,41 @@ const saveAppointment = async () => {
         : "Impossible de modifier le rendez-vous";
   } finally {
     isSaving.value = false;
+  }
+};
+
+const cancelAppointment = async () => {
+  if (!rawAppointment.value || !canCancelAppointment.value) {
+    return;
+  }
+
+  isCancelling.value = true;
+  cancelErrorMessage.value = "";
+
+  try {
+    const config = useRuntimeConfig();
+    const response = await fetch(
+      `${config.public.apiUrl}/appointments/${rawAppointment.value.id}/cancelled`,
+      {
+        method: "PATCH",
+        headers: getAuthHeaders(),
+      },
+    );
+
+    const result = (await response.json()) as ApiResponse<ApiAppointment>;
+
+    if (!response.ok || !result.success) {
+      throw new Error(result.error || "Impossible d'annuler le rendez-vous");
+    }
+
+    await fetchAppointmentDetails();
+  } catch (error) {
+    cancelErrorMessage.value =
+      error instanceof Error
+        ? error.message
+        : "Impossible d'annuler le rendez-vous";
+  } finally {
+    isCancelling.value = false;
   }
 };
 </script>
@@ -711,6 +785,9 @@ const saveAppointment = async () => {
         <p v-if="saveErrorMessage" class="text-center text-sm text-red-600">
           {{ saveErrorMessage }}
         </p>
+        <p v-if="cancelErrorMessage" class="text-center text-sm text-red-600">
+          {{ cancelErrorMessage }}
+        </p>
       </div>
     </section>
 
@@ -718,13 +795,22 @@ const saveAppointment = async () => {
       v-if="appointment"
       class="mt-6 flex flex-col items-center gap-4 lg:flex-row lg:gap-8"
     >
-      <button
-        v-if="!isEditing && canEditAppointment"
-        class="text-background flex w-full cursor-pointer items-center justify-center rounded-xl bg-green-700 px-4 py-3 font-bold shadow-lg transition-colors hover:bg-green-900"
-        @click="startEditing"
-      >
-        Modifier
-      </button>
+      <div v-if="!isEditing && canEditAppointment" class="flex w-full gap-3">
+        <button
+          class="text-background flex basis-2/3 cursor-pointer items-center justify-center rounded-xl bg-green-700 px-4 py-3 font-bold shadow-lg transition-colors hover:bg-green-900"
+          @click="startEditing"
+        >
+          Modifier
+        </button>
+        <button
+          :disabled="isCancelling"
+          class="flex basis-1/3 cursor-pointer items-center justify-center rounded-xl bg-red-500 px-4 py-3 font-bold text-white shadow-lg transition-colors hover:bg-red-600"
+          :class="{ 'cursor-not-allowed opacity-50': isCancelling }"
+          @click="cancelAppointment"
+        >
+          {{ isCancelling ? "Annulation..." : "Annuler" }}
+        </button>
+      </div>
 
       <div v-else-if="isEditing" class="flex w-full gap-3">
         <button

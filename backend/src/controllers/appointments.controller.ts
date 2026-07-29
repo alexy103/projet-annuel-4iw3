@@ -130,6 +130,51 @@ export const toggleAppointmentIsCompleted = async (req: Request, res: Response) 
     }
 };
 
+export const acceptAppointment = async (req: Request, res: Response) => {
+    try {
+        const appointmentId: string | undefined = req.params.appointmentId;
+        if (appointmentId === undefined || appointmentId === null) {
+            return ApiResponse.badRequest(res, "Appointment ID is required");
+        }
+
+        const { role, clinic_id } = (req as AuthenticatedRequest).user;
+        const appointment: Appointment = await appointmentService.setIsAccepted(Number(appointmentId), role, clinic_id);
+        return ApiResponse.success(res, appointment);
+    } catch (error) {
+        return ApiResponse.getError(res, error);
+    }
+};
+
+export const refuseAppointment = async (req: Request, res: Response) => {
+    try {
+        const appointmentId: string | undefined = req.params.appointmentId;
+        if (appointmentId === undefined || appointmentId === null) {
+            return ApiResponse.badRequest(res, "Appointment ID is required");
+        }
+
+        const { role, clinic_id } = (req as AuthenticatedRequest).user;
+        const appointment: Appointment = await appointmentService.setIsRefused(Number(appointmentId), role, clinic_id);
+        return ApiResponse.success(res, appointment);
+    } catch (error) {
+        return ApiResponse.getError(res, error);
+    }
+};
+
+export const cancelAppointment = async (req: Request, res: Response) => {
+    try {
+        const appointmentId: string | undefined = req.params.appointmentId;
+        if (appointmentId === undefined || appointmentId === null) {
+            return ApiResponse.badRequest(res, "Appointment ID is required");
+        }
+
+        const { userId, role, clinic_id } = (req as AuthenticatedRequest).user;
+        const appointment: Appointment = await appointmentService.setIsCancelled(Number(appointmentId), userId, role, clinic_id);
+        return ApiResponse.success(res, appointment);
+    } catch (error) {
+        return ApiResponse.getError(res, error);
+    }
+};
+
 export const deleteAppointment = async (req: Request, res: Response) => {
     try {
         const appointmentId: string | undefined = req.params.appointmentId;

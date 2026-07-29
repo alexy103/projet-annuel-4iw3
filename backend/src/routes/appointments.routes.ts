@@ -1,6 +1,8 @@
 import { Router } from "express";
 import { requireApiKey, requireAuth } from "../middlewares";
 import {
+  acceptAppointment,
+  cancelAppointment,
   createAppointment,
   deleteAppointment,
   getAppointmentById,
@@ -9,6 +11,7 @@ import {
   getAppointmentsByClinicId,
   getAppointmentsByReasonId,
   getAppointmentsByUserId,
+  refuseAppointment,
   toggleAppointmentIsCompleted,
   updateAppointment,
 } from "../controllers";
@@ -71,6 +74,27 @@ appointmentsRouter.patch(
   requireApiKey,
   requireAuth("admin", "clinic"),
   toggleAppointmentIsCompleted,
+);
+
+appointmentsRouter.patch(
+  "/:appointmentId/accepted",
+  requireApiKey,
+  requireAuth("admin", "clinic"),
+  acceptAppointment,
+);
+
+appointmentsRouter.patch(
+  "/:appointmentId/refused",
+  requireApiKey,
+  requireAuth("admin", "clinic"),
+  refuseAppointment,
+);
+
+appointmentsRouter.patch(
+  "/:appointmentId/cancelled",
+  requireApiKey,
+  requireAuth("admin", "clinic", "user"),
+  cancelAppointment,
 );
 
 appointmentsRouter.delete(
