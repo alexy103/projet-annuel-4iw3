@@ -80,13 +80,22 @@ onMounted(loadClinics);
           {{ pendingCount }} demande(s) en attente
         </p>
       </div>
-      <NuxtLink
-        to="/admin/clinics/create"
-        class="flex items-center gap-2 rounded-full bg-[#15D98B] px-4 py-2 text-sm font-bold text-white transition-transform duration-200 hover:scale-[1.02]"
-      >
-        <Icon name="material-symbols:add-rounded" class="size-5" />
-        Créer une clinique
-      </NuxtLink>
+      <div class="flex items-center gap-2">
+        <NuxtLink
+          to="/admin/users"
+          class="flex items-center gap-2 rounded-full bg-gray-200 px-4 py-2 text-sm font-bold text-black transition-transform duration-200 hover:scale-[1.02]"
+        >
+          <Icon name="material-symbols:group" class="size-5" />
+          Utilisateurs
+        </NuxtLink>
+        <NuxtLink
+          to="/admin/clinics/create"
+          class="flex items-center gap-2 rounded-full bg-[#15D98B] px-4 py-2 text-sm font-bold text-white transition-transform duration-200 hover:scale-[1.02]"
+        >
+          <Icon name="material-symbols:add-rounded" class="size-5" />
+          Créer une clinique
+        </NuxtLink>
+      </div>
     </div>
 
     <div class="flex gap-2 overflow-x-auto">
@@ -133,7 +142,6 @@ onMounted(loadClinics);
           class="mt-3 flex gap-2 border-t border-gray-100 pt-3"
         >
           <button
-            v-if="clinic.status !== 'approved'"
             :disabled="updatingId === clinic.id"
             class="rounded-full bg-[#15D98B] px-4 py-2 text-sm font-bold text-white transition-transform duration-200 hover:scale-105 disabled:opacity-50"
             @click="changeStatus(clinic, 'approved')"
