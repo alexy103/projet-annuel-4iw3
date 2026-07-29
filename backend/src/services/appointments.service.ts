@@ -3,6 +3,15 @@ import { appointmentsRepository, availabilitiesRepository, consultationsReposito
 import { Appointment, Availability, CreateAppointmentPayload, UpdateAppointmentPayload, User, Animal, Clinic, AppointmentReason, Consultation } from '../schemas';
 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const DAYS_FR = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
+
+function normalizeDayName(day: string): string {
+	return day
+		.normalize('NFD')
+		.replace(/[\u0300-\u036f]/g, '')
+		.toLowerCase()
+		.trim();
+}
 
 function parseDateOnlyString(value: string): { year: number; month: number; day: number } | null {
 	const datePart = value.includes('T') ? (value.split('T')[0] ?? value) : value;
@@ -99,9 +108,11 @@ function validateSlot(date: Date | string, time: string, availability: Availabil
 
 async function checkClinicAvailability(clinicId: number, date: Date | string, time: string): Promise<{ capacity: number }> {
 	const dateObj = toValidDate(date);
-	const dayName = DAYS[dateObj.getUTCDay()] as string;
+	const dayIndex = dateObj.getUTCDay();
+	const dayName = DAYS[dayIndex] as string;
+	const dayCandidates = [normalizeDayName(dayName), normalizeDayName(DAYS_FR[dayIndex] as string)];
 	const availabilities = await availabilitiesRepository.findByClinicId(clinicId);
-	const availability = availabilities.find((a) => a.day.toLowerCase() === dayName.toLowerCase());
+	const availability = availabilities.find((a) => dayCandidates.includes(normalizeDayName(a.day)));
 
 	if (!availability) {
 		throw new AppError(`Clinic is not available on ${dayName}`, 400);
