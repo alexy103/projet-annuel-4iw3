@@ -334,7 +334,7 @@ onMounted(loadAppointments);
       <button
         v-for="tab in tabs"
         :key="tab.key"
-        class="rounded-full px-4 py-2 text-sm font-bold transition-colors duration-200"
+        class="cursor-pointer rounded-full px-4 py-2 text-sm font-bold transition-colors duration-200"
         :class="
           activeTab === tab.key
             ? 'bg-[#15D98B] text-white'
@@ -457,14 +457,14 @@ onMounted(loadAppointments);
           >
             <button
               :disabled="updatingId === appt.id"
-              class="rounded-full bg-[#15D98B] px-4 py-2 text-sm font-bold text-white transition-transform duration-200 hover:scale-105 disabled:opacity-50"
+              class="cursor-pointer rounded-full bg-[#15D98B] px-4 py-2 text-sm font-bold text-white transition-transform duration-200 hover:scale-105 disabled:cursor-not-allowed disabled:opacity-50"
               @click="acceptAppointment(appt)"
             >
               Accepter
             </button>
             <button
               :disabled="updatingId === appt.id"
-              class="rounded-full bg-red-500 px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-red-600 disabled:opacity-50"
+              class="cursor-pointer rounded-full bg-red-500 px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-50"
               @click="refuseAppointment(appt)"
             >
               Refuser
@@ -477,14 +477,14 @@ onMounted(loadAppointments);
           >
             <button
               :disabled="updatingId === appt.id"
-              class="rounded-full bg-[#15D98B] px-4 py-2 text-sm font-bold text-white transition-transform duration-200 hover:scale-105 disabled:opacity-50"
+              class="cursor-pointer rounded-full bg-[#15D98B] px-4 py-2 text-sm font-bold text-white transition-transform duration-200 hover:scale-105 disabled:cursor-not-allowed disabled:opacity-50"
               @click="openConsultation(appt)"
             >
               Réaliser le RDV
             </button>
             <button
               :disabled="updatingId === appt.id"
-              class="rounded-full bg-red-500 px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-red-600 disabled:opacity-50"
+              class="cursor-pointer rounded-full bg-red-500 px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-50"
               @click="cancelAppointment(appt)"
             >
               Annuler

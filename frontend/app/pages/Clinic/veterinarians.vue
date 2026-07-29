@@ -46,7 +46,9 @@ const loadVeterinarians = async () => {
     veterinarians.value = await fetchByClinic(clinic.id);
   } catch (error) {
     errorMessage.value =
-      error instanceof Error ? error.message : "Impossible de charger les vétérinaires";
+      error instanceof Error
+        ? error.message
+        : "Impossible de charger les vétérinaires";
   } finally {
     isLoading.value = false;
   }
@@ -110,7 +112,7 @@ onMounted(loadVeterinarians);
         <h1 class="text-2xl font-bold">Nos vétérinaires</h1>
       </div>
       <button
-        class="flex items-center gap-2 rounded-full bg-[#15D98B] px-4 py-2 text-sm font-bold text-white transition-transform duration-200 hover:scale-[1.02]"
+        class="flex cursor-pointer items-center gap-2 rounded-full bg-[#15D98B] px-4 py-2 text-sm font-bold text-white transition-transform duration-200 hover:scale-[1.02]"
         @click="showAddPopup = true"
       >
         <Icon name="material-symbols:add-rounded" class="size-5" />
@@ -129,22 +131,26 @@ onMounted(loadVeterinarians);
         :key="vet.id"
         class="flex items-center gap-4 rounded-full bg-[#15D98B] px-4 py-3 text-white"
       >
-        <div class="flex size-16 shrink-0 items-center justify-center rounded-full bg-gray-300">
+        <div
+          class="flex size-16 shrink-0 items-center justify-center rounded-full bg-gray-300"
+        >
           <Icon name="material-symbols:person" class="size-8 text-white" />
         </div>
         <div class="flex-1">
-          <p class="text-lg font-bold">{{ vet.first_name }} {{ vet.last_name }}</p>
+          <p class="text-lg font-bold">
+            {{ vet.first_name }} {{ vet.last_name }}
+          </p>
           <p class="text-sm">{{ vet.is_present ? "Présent" : "Absent" }}</p>
         </div>
         <div class="flex flex-col gap-2">
           <button
-            class="rounded-full bg-white/20 px-3 py-1 text-xs font-bold transition-colors hover:bg-white/30"
+            class="cursor-pointer rounded-full bg-white/20 px-3 py-1 text-xs font-bold transition-colors hover:bg-white/30"
             @click="togglePresence(vet)"
           >
             {{ vet.is_present ? "Marquer absent" : "Marquer présent" }}
           </button>
           <button
-            class="rounded-full bg-red-500 px-3 py-1 text-xs font-bold transition-colors hover:bg-red-600"
+            class="cursor-pointer rounded-full bg-red-500 px-3 py-1 text-xs font-bold transition-colors hover:bg-red-600"
             @click="removeVeterinarian(vet)"
           >
             Supprimer
@@ -164,8 +170,12 @@ onMounted(loadVeterinarians);
       <button
         v-for="page in totalPages"
         :key="page"
-        class="flex size-8 items-center justify-center rounded-full text-sm font-bold transition-all duration-200 hover:scale-110"
-        :class="page === currentPage ? 'bg-[#15D98B] text-white' : 'bg-gray-200 text-black'"
+        class="flex size-8 cursor-pointer items-center justify-center rounded-full text-sm font-bold transition-all duration-200 hover:scale-110"
+        :class="
+          page === currentPage
+            ? 'bg-[#15D98B] text-white'
+            : 'bg-gray-200 text-black'
+        "
         @click="currentPage = page"
       >
         {{ page }}

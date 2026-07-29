@@ -38,7 +38,9 @@ const loadClinic = async () => {
     };
   } catch (error) {
     errorMessage.value =
-      error instanceof Error ? error.message : "Impossible de charger la clinique";
+      error instanceof Error
+        ? error.message
+        : "Impossible de charger la clinique";
   } finally {
     isLoading.value = false;
   }
@@ -129,10 +131,16 @@ onMounted(loadClinic);
 
     <button
       :disabled="isSaving || isLoading"
-      class="w-full rounded-full bg-[#15D98B] py-3 font-bold text-white transition-transform duration-200 hover:scale-[1.02] disabled:opacity-50"
+      class="w-full cursor-pointer rounded-full bg-[#15D98B] py-3 font-bold text-white transition-transform duration-200 hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-50"
       @click="save"
     >
-      {{ saved ? '✓ Enregistré !' : isSaving ? 'Enregistrement...' : 'Enregistrer les modifications' }}
+      {{
+        saved
+          ? "✓ Enregistré !"
+          : isSaving
+            ? "Enregistrement..."
+            : "Enregistrer les modifications"
+      }}
     </button>
   </div>
 </template>

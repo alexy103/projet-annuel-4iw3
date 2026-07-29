@@ -52,9 +52,7 @@ const dayIndex = (day: string) =>
   );
 
 const sortedAvailabilities = computed(() =>
-  [...availabilities.value].sort(
-    (a, b) => dayIndex(a.day) - dayIndex(b.day),
-  ),
+  [...availabilities.value].sort((a, b) => dayIndex(a.day) - dayIndex(b.day)),
 );
 
 const formatHour = (hour: number) => `${String(hour).padStart(2, "0")}h`;
@@ -119,7 +117,8 @@ const addAvailability = async () => {
     resetForm();
     showAddPopup.value = false;
   } catch (error) {
-    formError.value = error instanceof Error ? error.message : "Ajout impossible";
+    formError.value =
+      error instanceof Error ? error.message : "Ajout impossible";
   } finally {
     isSubmitting.value = false;
   }
@@ -150,7 +149,7 @@ onMounted(loadAvailabilities);
         <h1 class="text-2xl font-bold">Horaires d'ouverture</h1>
       </div>
       <button
-        class="flex items-center gap-2 rounded-full bg-[#15D98B] px-4 py-2 text-sm font-bold text-white transition-transform duration-200 hover:scale-[1.02]"
+        class="flex cursor-pointer items-center gap-2 rounded-full bg-[#15D98B] px-4 py-2 text-sm font-bold text-white transition-transform duration-200 hover:scale-[1.02]"
         @click="showAddPopup = true"
       >
         <Icon name="material-symbols:add-rounded" class="size-5" />
@@ -172,17 +171,20 @@ onMounted(loadAvailabilities);
         <div class="flex-1">
           <p class="text-lg font-bold">{{ dayLabel(availability.day) }}</p>
           <p class="text-sm">
-            {{ formatHour(availability.opening) }} - {{ formatHour(availability.closing) }}
+            {{ formatHour(availability.opening) }} -
+            {{ formatHour(availability.closing) }}
             <span v-if="availability.slot_rules?.break">
-              (pause {{ formatHour(availability.slot_rules.break.start) }} - {{ formatHour(availability.slot_rules.break.end) }})
+              (pause {{ formatHour(availability.slot_rules.break.start) }} -
+              {{ formatHour(availability.slot_rules.break.end) }})
             </span>
           </p>
           <p class="text-xs text-white/80">
-            Créneaux de {{ availability.slot_rules?.interval }} min · {{ availability.slot_rules?.capacity ?? 1 }} rdv/créneau
+            Créneaux de {{ availability.slot_rules?.interval }} min ·
+            {{ availability.slot_rules?.capacity ?? 1 }} rdv/créneau
           </p>
         </div>
         <button
-          class="rounded-full bg-red-500 px-3 py-1 text-xs font-bold transition-colors hover:bg-red-600"
+          class="cursor-pointer rounded-full bg-red-500 px-3 py-1 text-xs font-bold transition-colors hover:bg-red-600"
           @click="removeAvailability(availability)"
         >
           Supprimer
@@ -201,21 +203,56 @@ onMounted(loadAvailabilities);
       <form @submit.prevent="addAvailability" class="w-72 space-y-4">
         <p class="text-center font-bold">Ajouter un horaire</p>
 
-        <BaseSelect id="availability-day" v-model="newDayLabel" label="Jour" :options="dayLabels" />
+        <BaseSelect
+          id="availability-day"
+          v-model="newDayLabel"
+          label="Jour"
+          :options="dayLabels"
+        />
 
         <div class="flex gap-3">
-          <BaseInput v-model="newOpening" label="Ouverture (h)" type="number" small />
-          <BaseInput v-model="newClosing" label="Fermeture (h)" type="number" small />
+          <BaseInput
+            v-model="newOpening"
+            label="Ouverture (h)"
+            type="number"
+            small
+          />
+          <BaseInput
+            v-model="newClosing"
+            label="Fermeture (h)"
+            type="number"
+            small
+          />
         </div>
 
         <div class="flex gap-3">
-          <BaseInput v-model="newBreakStart" label="Pause début (h)" type="number" small />
-          <BaseInput v-model="newBreakEnd" label="Pause fin (h)" type="number" small />
+          <BaseInput
+            v-model="newBreakStart"
+            label="Pause début (h)"
+            type="number"
+            small
+          />
+          <BaseInput
+            v-model="newBreakEnd"
+            label="Pause fin (h)"
+            type="number"
+            small
+          />
         </div>
 
         <div class="flex gap-3">
-          <BaseInput v-model="newInterval" label="Intervalle (min)" type="number" small />
-          <BaseInput v-model="newCapacity" label="Capacité/créneau" type="number" small />
+          <BaseInput
+            v-model="newInterval"
+            label="Intervalle (min)"
+            type="number"
+            small
+          />
+          <BaseInput
+            v-model="newCapacity"
+            label="Capacité/créneau"
+            type="number"
+            small
+          />
         </div>
 
         <p v-if="formError" class="text-center text-sm text-red-500">
