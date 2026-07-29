@@ -2,6 +2,8 @@
 const router = useRouter();
 const authStore = useAuthStore();
 const userStore = useUserStore();
+const isClientMounted = ref(false);
+const isClinicRole = ref(false);
 
 type TreatmentType = {
   id: number;
@@ -249,8 +251,14 @@ const logout = async () => {
 };
 
 onMounted(() => {
+  isClientMounted.value = true;
+  isClinicRole.value = localStorage.getItem("roleId") === "3";
+
   refreshTwoFactorStatus();
-  fetchTreatmentTypes();
+
+  if (!isClinicRole.value) {
+    fetchTreatmentTypes();
+  }
 });
 
 onUnmounted(() => {
@@ -293,102 +301,111 @@ onUnmounted(() => {
       </div>
     </BaseSection>
 
-    <BaseSection title="Mon application" class="space-y-4" color="blue">
-      <div class="flex items-center justify-between gap-4">
-        <p>Notifications push</p>
-        <BaseToggle v-model="notificationsPush" />
-      </div>
-      <div class="flex items-center justify-between gap-4">
-        <p>Mode nuit</p>
-        <BaseToggle v-model="nightMode" />
-      </div>
-    </BaseSection>
+    <ClientOnly>
+      <template v-if="isClientMounted && !isClinicRole">
+        <BaseSection title="Mon application" class="space-y-4" color="blue">
+          <div class="flex items-center justify-between gap-4">
+            <p>Notifications push</p>
+            <BaseToggle v-model="notificationsPush" />
+          </div>
+          <div class="flex items-center justify-between gap-4">
+            <p>Mode nuit</p>
+            <BaseToggle v-model="nightMode" />
+          </div>
+        </BaseSection>
 
-    <BaseSection title="Types de traitement" class="space-y-4">
-      <div class="flex flex-col gap-3 md:flex-row md:items-end">
-        <div class="w-full md:flex-1">
-          <BaseInput
-            v-model="newTreatmentTypeName"
-            label="Nouveau type"
-            placeholder="Ex: Vaccination"
-          />
-        </div>
-        <BaseButton
-          class="flex justify-center"
-          :class="{ 'pointer-events-none opacity-50': isSavingTreatmentType }"
-          @click="createTreatmentType"
-        >
-          Ajouter
-        </BaseButton>
-      </div>
+        <BaseSection title="Types de traitement" class="space-y-4">
+          <div class="flex flex-col gap-3 md:flex-row md:items-end">
+            <div class="w-full md:flex-1">
+              <BaseInput
+                v-model="newTreatmentTypeName"
+                label="Nouveau type"
+                placeholder="Ex: Vaccination"
+              />
+            </div>
+            <BaseButton
+              class="flex justify-center"
+              :class="{
+                'pointer-events-none opacity-50': isSavingTreatmentType,
+              }"
+              @click="createTreatmentType"
+            >
+              Ajouter
+            </BaseButton>
+          </div>
 
-      <p v-if="isLoadingTreatmentTypes" class="text-sm text-gray-600">
-        Chargement des types de traitement...
-      </p>
+          <p v-if="isLoadingTreatmentTypes" class="text-sm text-gray-600">
+            Chargement des types de traitement...
+          </p>
 
-      <p v-else-if="treatmentTypes.length === 0" class="text-sm text-gray-600">
-        Aucun type de traitement pour le moment.
-      </p>
-
-      <div v-else class="space-y-2">
-        <div
-          v-for="type in treatmentTypes"
-          :key="type.id"
-          class="bg-background flex flex-col gap-2 rounded-xl border border-black/20 p-3 md:flex-row md:items-center"
-        >
-          <div
-            v-if="editingTreatmentTypeId === type.id"
-            class="w-full md:flex-1"
+          <p
+            v-else-if="treatmentTypes.length === 0"
+            class="text-sm text-gray-600"
           >
-            <BaseInput v-model="editingTreatmentTypeName" />
-          </div>
-          <p v-else class="font-semibold md:flex-1">{{ type.name }}</p>
+            Aucun type de traitement pour le moment.
+          </p>
 
-          <div class="flex items-center gap-2">
-            <template v-if="editingTreatmentTypeId === type.id">
-              <button
-                type="button"
-                class="button text-background bg-green-500"
-                :disabled="isSavingTreatmentType"
-                @click="saveTreatmentType(type.id)"
+          <div v-else class="space-y-2">
+            <div
+              v-for="type in treatmentTypes"
+              :key="type.id"
+              class="bg-background flex flex-col gap-2 rounded-xl border border-black/20 p-3 md:flex-row md:items-center"
+            >
+              <div
+                v-if="editingTreatmentTypeId === type.id"
+                class="w-full md:flex-1"
               >
-                Enregistrer
-              </button>
-              <button
-                type="button"
-                class="button bg-grey-500 text-black"
-                :disabled="isSavingTreatmentType"
-                @click="cancelEditingTreatmentType"
-              >
-                Annuler
-              </button>
-            </template>
-            <template v-else>
-              <button
-                type="button"
-                class="button text-background bg-blue-500"
-                :disabled="isSavingTreatmentType"
-                @click="startEditingTreatmentType(type)"
-              >
-                Modifier
-              </button>
-              <button
-                type="button"
-                class="button bg-red text-background"
-                :disabled="isSavingTreatmentType"
-                @click="deleteTreatmentType(type.id)"
-              >
-                Supprimer
-              </button>
-            </template>
-          </div>
-        </div>
-      </div>
+                <BaseInput v-model="editingTreatmentTypeName" />
+              </div>
+              <p v-else class="font-semibold md:flex-1">{{ type.name }}</p>
 
-      <p v-if="treatmentTypeErrorMessage" class="text-sm text-red-600">
-        {{ treatmentTypeErrorMessage }}
-      </p>
-    </BaseSection>
+              <div class="flex items-center gap-2">
+                <template v-if="editingTreatmentTypeId === type.id">
+                  <button
+                    type="button"
+                    class="button text-background bg-green-500"
+                    :disabled="isSavingTreatmentType"
+                    @click="saveTreatmentType(type.id)"
+                  >
+                    Enregistrer
+                  </button>
+                  <button
+                    type="button"
+                    class="button bg-grey-500 text-black"
+                    :disabled="isSavingTreatmentType"
+                    @click="cancelEditingTreatmentType"
+                  >
+                    Annuler
+                  </button>
+                </template>
+                <template v-else>
+                  <button
+                    type="button"
+                    class="button text-background bg-blue-500"
+                    :disabled="isSavingTreatmentType"
+                    @click="startEditingTreatmentType(type)"
+                  >
+                    Modifier
+                  </button>
+                  <button
+                    type="button"
+                    class="button bg-red text-background"
+                    :disabled="isSavingTreatmentType"
+                    @click="deleteTreatmentType(type.id)"
+                  >
+                    Supprimer
+                  </button>
+                </template>
+              </div>
+            </div>
+          </div>
+
+          <p v-if="treatmentTypeErrorMessage" class="text-sm text-red-600">
+            {{ treatmentTypeErrorMessage }}
+          </p>
+        </BaseSection>
+      </template>
+    </ClientOnly>
 
     <BaseSection title="Sécurité" class="space-y-4">
       <div class="flex items-center justify-between gap-4">

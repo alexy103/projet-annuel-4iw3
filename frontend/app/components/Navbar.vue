@@ -50,6 +50,14 @@ type TimeSlot = {
 };
 
 const userStore = useUserStore();
+const props = withDefaults(
+  defineProps<{
+    showAnimalBubbles?: boolean;
+  }>(),
+  {
+    showAnimalBubbles: true,
+  },
+);
 const {
   isOpen: showNewApt,
   prefilledDate,
@@ -58,6 +66,11 @@ const {
   clearPrefilledDate,
 } = useAppointmentBookingPopup();
 const isReady = ref(false);
+const isClientMounted = ref(false);
+const isClinicRole = ref(false);
+const canShowAnimalBubbles = computed(
+  () => props.showAnimalBubbles && !isClinicRole.value,
+);
 const isSubmittingAppointment = ref(false);
 const isLoadingLookups = ref(false);
 const appointmentErrorMessage = ref("");
@@ -484,16 +497,25 @@ const createAppointment = async () => {
 };
 
 onMounted(async () => {
+  isClientMounted.value = true;
+  isClinicRole.value = localStorage.getItem("roleId") === "3";
+
   if (!userStore.id) {
     await userStore.fetchMe();
   }
 
-  await Promise.all([userStore.fetchAnimals(), loadAppointmentFormData()]);
+  if (canShowAnimalBubbles.value) {
+    await Promise.all([userStore.fetchAnimals(), loadAppointmentFormData()]);
+  }
 
   isReady.value = true;
 });
 
 watch(showNewApt, async (isOpen) => {
+  if (!canShowAnimalBubbles.value) {
+    return;
+  }
+
   if (isOpen) {
     appointmentErrorMessage.value = "";
 
@@ -534,14 +556,17 @@ watch([selectedClinicLabel, appointmentDate], async () => {
           <h1>PawTracker</h1>
         </NuxtLink>
 
-        <NuxtLink :to="profileLink">
+        <NuxtLink v-if="isClientMounted && profileLink" :to="profileLink">
           <Icon
             name="solar:user-outline"
             class="size-8 cursor-pointer text-black"
           />
         </NuxtLink>
 
+        <Icon v-else name="solar:user-outline" class="size-8 text-black" />
+
         <Icon
+          v-if="canShowAnimalBubbles"
           name="solar:calendar-add-outline"
           class="ml-2 size-8 cursor-pointer text-black"
           @click="open"
@@ -549,7 +574,7 @@ watch([selectedClinicLabel, appointmentDate], async () => {
       </div>
 
       <ul
-        v-if="isReady"
+        v-if="isReady && canShowAnimalBubbles"
         class="-mx-4 flex items-center gap-2 overflow-x-auto px-4"
       >
         <li
@@ -587,7 +612,7 @@ watch([selectedClinicLabel, appointmentDate], async () => {
       </ul>
     </div>
 
-    <BasePopup v-model="showNewApt" fit>
+    <BasePopup v-if="canShowAnimalBubbles" v-model="showNewApt" fit>
       <div class="mx-auto w-[86vw] max-w-[20rem] sm:max-w-sm md:max-w-xl">
         <h2 class="mb-4 text-center font-bold">Prendre un rendez-vous</h2>
 
