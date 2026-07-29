@@ -20,12 +20,13 @@ const isLoading = ref(false);
 const errorMessage = ref("");
 const updatingId = ref<number | null>(null);
 
-const activeTab = ref<"upcoming" | "past">("upcoming");
+const activeTab = ref<"pending" | "upcoming" | "past">("pending");
 const selectedAppointment = ref<number | null>(null);
 
 const tabs = [
+  { key: "pending", label: "En attente" },
   { key: "upcoming", label: "À venir" },
-  { key: "past", label: "Terminés / annulés" },
+  { key: "past", label: "Terminés / annulés / refusés" },
 ];
 
 const consultationAppointment = ref<Appointment | null>(null);
@@ -46,25 +47,37 @@ const reasonLabel = (reasonId: number) =>
   reasons.value.find((reason) => reason.id === reasonId)?.label ?? "Consultation";
 
 const statusLabel = (appt: Appointment) => {
+  if (appt.is_refused) return "Refusé";
   if (appt.is_cancelled) return "Annulé";
   if (appt.is_completed) return "Terminé";
+  if (!appt.is_accepted) return "En attente";
   return "À venir";
 };
 
 const statusClass = (appt: Appointment) => {
+  if (appt.is_refused) return "bg-red-500";
   if (appt.is_cancelled) return "bg-red-500";
   if (appt.is_completed) return "bg-gray-400";
+  if (!appt.is_accepted) return "bg-yellow-500";
   return "bg-[#31C6D0]";
 };
+
+const isSettled = (appt: Appointment) =>
+  appt.is_completed || appt.is_cancelled || appt.is_refused;
 
 const filtered = computed(() => {
   const sorted = [...appointments.value].sort((a, b) => {
     const dateCompare = getDatePart(a.date).localeCompare(getDatePart(b.date));
     return dateCompare !== 0 ? dateCompare : a.time.localeCompare(b.time);
   });
-  return activeTab.value === "upcoming"
-    ? sorted.filter((appointment) => !appointment.is_completed && !appointment.is_cancelled)
-    : sorted.filter((appointment) => appointment.is_completed || appointment.is_cancelled);
+
+  if (activeTab.value === "pending") {
+    return sorted.filter((appointment) => !appointment.is_accepted && !isSettled(appointment));
+  }
+  if (activeTab.value === "upcoming") {
+    return sorted.filter((appointment) => appointment.is_accepted && !isSettled(appointment));
+  }
+  return sorted.filter((appointment) => isSettled(appointment));
 });
 
 const loadAppointments = async () => {
@@ -149,6 +162,38 @@ const submitConsultation = async () => {
   }
 };
 
+const acceptAppointment = async (appointment: Appointment) => {
+  updatingId.value = appointment.id;
+  try {
+    const updated = await apiFetch<Appointment>(
+      `/appointments/${appointment.id}/accepted`,
+      { method: "PATCH" },
+    );
+    appointment.is_accepted = updated.is_accepted;
+  } catch (error) {
+    errorMessage.value =
+      error instanceof Error ? error.message : "Acceptation impossible";
+  } finally {
+    updatingId.value = null;
+  }
+};
+
+const refuseAppointment = async (appointment: Appointment) => {
+  updatingId.value = appointment.id;
+  try {
+    const updated = await apiFetch<Appointment>(
+      `/appointments/${appointment.id}/refused`,
+      { method: "PATCH" },
+    );
+    appointment.is_refused = updated.is_refused;
+  } catch (error) {
+    errorMessage.value =
+      error instanceof Error ? error.message : "Refus impossible";
+  } finally {
+    updatingId.value = null;
+  }
+};
+
 const cancelAppointment = async (appointment: Appointment) => {
   updatingId.value = appointment.id;
   try {
@@ -177,13 +222,13 @@ onMounted(loadAppointments);
       <h1 class="text-2xl font-bold">Gestion des RDV</h1>
     </div>
 
-    <div class="flex gap-2">
+    <div class="flex flex-wrap gap-2">
       <button
         v-for="tab in tabs"
         :key="tab.key"
         class="rounded-full px-4 py-2 text-sm font-bold transition-colors duration-200"
         :class="activeTab === tab.key ? 'bg-[#15D98B] text-white' : 'bg-gray-200 text-black'"
-        @click="activeTab = tab.key as 'upcoming' | 'past'"
+        @click="activeTab = tab.key as 'pending' | 'upcoming' | 'past'"
       >
         {{ tab.label }}
       </button>
@@ -246,7 +291,24 @@ onMounted(loadAppointments);
             <p class="text-sm font-bold">{{ appt.remark }}</p>
           </div>
 
-          <div v-if="!appt.is_completed && !appt.is_cancelled" class="flex gap-2 pt-1">
+          <div v-if="!appt.is_accepted && !isSettled(appt)" class="flex gap-2 pt-1">
+            <button
+              :disabled="updatingId === appt.id"
+              class="rounded-full bg-[#15D98B] px-4 py-2 text-sm font-bold text-white transition-transform duration-200 hover:scale-105 disabled:opacity-50"
+              @click="acceptAppointment(appt)"
+            >
+              Accepter
+            </button>
+            <button
+              :disabled="updatingId === appt.id"
+              class="rounded-full bg-red-500 px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-red-600 disabled:opacity-50"
+              @click="refuseAppointment(appt)"
+            >
+              Refuser
+            </button>
+          </div>
+
+          <div v-else-if="appt.is_accepted && !isSettled(appt)" class="flex gap-2 pt-1">
             <button
               :disabled="updatingId === appt.id"
               class="rounded-full bg-[#15D98B] px-4 py-2 text-sm font-bold text-white transition-transform duration-200 hover:scale-105 disabled:opacity-50"

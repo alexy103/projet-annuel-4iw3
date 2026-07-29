@@ -235,6 +235,10 @@ export const appointmentService = {
 
 		if (role === 'clinic' && existingAppointment.clinic_id !== callerClinicId) throw new AppError('Access denied', 403);
 
+		if (isCompleted && !existingAppointment.is_accepted) {
+			throw new AppError('Appointment must be accepted before it can be completed', 409);
+		}
+
 		if (existingAppointment.is_completed && existingAppointment.is_completed == isCompleted) {
 			throw new AppError('Appointment already completed', 409);
 		}
@@ -245,6 +249,32 @@ export const appointmentService = {
 		return appointmentsRepository.updateIsCompleted(appointmentId, isCompleted);
 	},
 
+	async setIsAccepted(appointmentId: number, role: string, callerClinicId?: number): Promise<Appointment> {
+		const existingAppointment: Appointment = await appointmentsRepository.findById(appointmentId);
+		if (!existingAppointment) throw new AppError('Appointment not found', 404);
+
+		if (role === 'clinic' && existingAppointment.clinic_id !== callerClinicId) throw new AppError('Access denied', 403);
+
+		if (existingAppointment.is_refused) throw new AppError('Cannot accept a refused appointment', 409);
+		if (existingAppointment.is_cancelled) throw new AppError('Cannot accept a cancelled appointment', 409);
+		if (existingAppointment.is_accepted) throw new AppError('Appointment already accepted', 409);
+
+		return appointmentsRepository.updateIsAccepted(appointmentId);
+	},
+
+	async setIsRefused(appointmentId: number, role: string, callerClinicId?: number): Promise<Appointment> {
+		const existingAppointment: Appointment = await appointmentsRepository.findById(appointmentId);
+		if (!existingAppointment) throw new AppError('Appointment not found', 404);
+
+		if (role === 'clinic' && existingAppointment.clinic_id !== callerClinicId) throw new AppError('Access denied', 403);
+
+		if (existingAppointment.is_accepted) throw new AppError('Cannot refuse an already accepted appointment', 409);
+		if (existingAppointment.is_cancelled) throw new AppError('Appointment already cancelled', 409);
+		if (existingAppointment.is_refused) throw new AppError('Appointment already refused', 409);
+
+		return appointmentsRepository.updateIsRefused(appointmentId);
+	},
+
 	async setIsCancelled(appointmentId: number, callerId: number, role: string, callerClinicId?: number): Promise<Appointment> {
 		const existingAppointment: Appointment = await appointmentsRepository.findById(appointmentId);
 		if (!existingAppointment) throw new AppError('Appointment not found', 404);
@@ -253,7 +283,12 @@ export const appointmentService = {
 		if (role === 'clinic' && existingAppointment.clinic_id !== callerClinicId) throw new AppError('Access denied', 403);
 
 		if (existingAppointment.is_cancelled) throw new AppError('Appointment already cancelled', 409);
+		if (existingAppointment.is_refused) throw new AppError('Appointment already refused', 409);
 		if (existingAppointment.is_completed) throw new AppError('Cannot cancel a completed appointment', 409);
+
+		if (role === 'clinic' && !existingAppointment.is_accepted) {
+			throw new AppError('Use refuse for a pending appointment', 409);
+		}
 
 		if (role === 'user' && isInPast(existingAppointment.date, existingAppointment.time)) {
 			throw new AppError('Cannot cancel a past appointment', 409);

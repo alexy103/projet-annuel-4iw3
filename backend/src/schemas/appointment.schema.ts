@@ -33,6 +33,16 @@ const AppointmentBaseSchema = zod
 			example: false,
 		}),
 
+		is_accepted: zod.boolean().default(false).openapi({
+			description: 'Whether the clinic accepted the appointment',
+			example: false,
+		}),
+
+		is_refused: zod.boolean().default(false).openapi({
+			description: 'Whether the clinic refused the appointment',
+			example: false,
+		}),
+
 		user_id: zod.number().int('User ID must be an integer').positive('User ID must be positive').openapi({
 			description: 'User ID',
 			example: 1,

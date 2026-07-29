@@ -12,6 +12,8 @@ type ApiAppointment = {
   reason_id: number;
   is_completed: boolean;
   is_cancelled: boolean;
+  is_accepted: boolean;
+  is_refused: boolean;
   user_id: number;
   animal_id: number;
   clinic_id: number;
@@ -69,7 +71,7 @@ type AppointmentDetails = {
   clinic: string;
   address: string;
   veterinarian: string;
-  status: "En attente" | "Terminé" | "Annulé";
+  status: "En attente" | "Confirmé" | "Terminé" | "Annulé" | "Refusé";
   notes: string;
 };
 
@@ -457,11 +459,15 @@ const fetchAppointmentDetails = async () => {
       clinic: clinicName,
       address: clinicAddress,
       veterinarian: "Non renseigné",
-      status: appointmentData.is_cancelled
-        ? "Annulé"
-        : isFinished
-          ? "Terminé"
-          : "En attente",
+      status: appointmentData.is_refused
+        ? "Refusé"
+        : appointmentData.is_cancelled
+          ? "Annulé"
+          : isFinished
+            ? "Terminé"
+            : appointmentData.is_accepted
+              ? "Confirmé"
+              : "En attente",
       notes: appointmentData.remark || "",
     };
 
@@ -492,10 +498,15 @@ const isCancelledAppointment = computed(() => {
   return appointment.value?.status === "Annulé";
 });
 
+const isRefusedAppointment = computed(() => {
+  return appointment.value?.status === "Refusé";
+});
+
 const canEditAppointment = computed(() => {
   return (
     !isFinishedAppointment.value &&
     !isCancelledAppointment.value &&
+    !isRefusedAppointment.value &&
     !isSaving.value
   );
 });
@@ -504,6 +515,7 @@ const canCancelAppointment = computed(() => {
   return (
     !isFinishedAppointment.value &&
     !isCancelledAppointment.value &&
+    !isRefusedAppointment.value &&
     !isCancelling.value
   );
 });
@@ -525,12 +537,12 @@ const appointmentStatusClass = computed(() => {
     return "bg-gray-400";
   }
 
-  if (appointmentStatus.value === "Annulé") {
+  if (appointmentStatus.value === "Annulé" || appointmentStatus.value === "Refusé") {
     return "bg-red-500";
   }
 
   if (appointmentStatus.value === "En attente") {
-    return "bg-blue-500";
+    return "bg-yellow-500";
   }
 
   return "bg-green-500";
