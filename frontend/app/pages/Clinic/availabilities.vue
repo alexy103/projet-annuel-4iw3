@@ -6,15 +6,24 @@ definePageMeta({
   layout: "default",
 });
 
-const DAYS = [
-  "Lundi",
-  "Mardi",
-  "Mercredi",
-  "Jeudi",
-  "Vendredi",
-  "Samedi",
-  "Dimanche",
+// Le backend compare les jours en anglais (voir appointments.service.ts), on
+// affiche le français mais on envoie/lit toujours la valeur anglaise.
+const DAY_OPTIONS = [
+  { label: "Lundi", value: "Monday" },
+  { label: "Mardi", value: "Tuesday" },
+  { label: "Mercredi", value: "Wednesday" },
+  { label: "Jeudi", value: "Thursday" },
+  { label: "Vendredi", value: "Friday" },
+  { label: "Samedi", value: "Saturday" },
+  { label: "Dimanche", value: "Sunday" },
 ];
+
+const dayLabels = DAY_OPTIONS.map((option) => option.label);
+
+const dayLabel = (value: string) =>
+  DAY_OPTIONS.find(
+    (option) => option.value.toLowerCase() === value.toLowerCase(),
+  )?.label ?? value;
 
 const { fetchClinics } = useClinics();
 const { fetchByClinic, createAvailability, deleteAvailability } =
@@ -29,7 +38,7 @@ const showAddPopup = ref(false);
 const isSubmitting = ref(false);
 const formError = ref("");
 
-const newDay = ref<string | null>(null);
+const newDayLabel = ref<string | null>(null);
 const newOpening = ref("9");
 const newClosing = ref("18");
 const newBreakStart = ref("12");
@@ -37,9 +46,14 @@ const newBreakEnd = ref("13");
 const newInterval = ref("15");
 const newCapacity = ref("1");
 
+const dayIndex = (day: string) =>
+  DAY_OPTIONS.findIndex(
+    (option) => option.value.toLowerCase() === day.toLowerCase(),
+  );
+
 const sortedAvailabilities = computed(() =>
   [...availabilities.value].sort(
-    (a, b) => DAYS.indexOf(a.day) - DAYS.indexOf(b.day),
+    (a, b) => dayIndex(a.day) - dayIndex(b.day),
   ),
 );
 
@@ -65,7 +79,7 @@ const loadAvailabilities = async () => {
 };
 
 const resetForm = () => {
-  newDay.value = null;
+  newDayLabel.value = null;
   newOpening.value = "9";
   newClosing.value = "18";
   newBreakStart.value = "12";
@@ -75,7 +89,11 @@ const resetForm = () => {
 };
 
 const addAvailability = async () => {
-  if (!clinicId.value || !newDay.value) {
+  const englishDay = DAY_OPTIONS.find(
+    (option) => option.label === newDayLabel.value,
+  )?.value;
+
+  if (!clinicId.value || !englishDay) {
     formError.value = "Le jour est obligatoire";
     return;
   }
@@ -85,7 +103,7 @@ const addAvailability = async () => {
   try {
     const created = await createAvailability({
       clinic_id: clinicId.value,
-      day: newDay.value,
+      day: englishDay,
       opening: Number(newOpening.value),
       closing: Number(newClosing.value),
       slot_rules: {
@@ -152,7 +170,7 @@ onMounted(loadAvailabilities);
         class="flex items-center gap-4 rounded-2xl bg-[#15D98B] px-4 py-3 text-white"
       >
         <div class="flex-1">
-          <p class="text-lg font-bold">{{ availability.day }}</p>
+          <p class="text-lg font-bold">{{ dayLabel(availability.day) }}</p>
           <p class="text-sm">
             {{ formatHour(availability.opening) }} - {{ formatHour(availability.closing) }}
             <span v-if="availability.slot_rules?.break">
@@ -183,7 +201,7 @@ onMounted(loadAvailabilities);
       <form @submit.prevent="addAvailability" class="w-72 space-y-4">
         <p class="text-center font-bold">Ajouter un horaire</p>
 
-        <BaseSelect id="availability-day" v-model="newDay" label="Jour" :options="DAYS" />
+        <BaseSelect id="availability-day" v-model="newDayLabel" label="Jour" :options="dayLabels" />
 
         <div class="flex gap-3">
           <BaseInput v-model="newOpening" label="Ouverture (h)" type="number" small />
