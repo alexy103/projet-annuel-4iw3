@@ -19,9 +19,6 @@ const lastName = ref(userStore.lastName);
 const profilePictureFile = ref<File | null>(null);
 const profilePicturePreview = ref<string | null>(null);
 
-const notificationsPush = ref(true);
-const nightMode = ref(false);
-
 const handleProfilePictureUpload = (event: Event) => {
   const input = event.target as HTMLInputElement;
   const file = input.files?.[0];
@@ -303,17 +300,6 @@ onUnmounted(() => {
 
     <ClientOnly>
       <template v-if="isClientMounted && !isClinicRole">
-        <BaseSection title="Mon application" class="space-y-4" color="blue">
-          <div class="flex items-center justify-between gap-4">
-            <p>Notifications push</p>
-            <BaseToggle v-model="notificationsPush" />
-          </div>
-          <div class="flex items-center justify-between gap-4">
-            <p>Mode nuit</p>
-            <BaseToggle v-model="nightMode" />
-          </div>
-        </BaseSection>
-
         <BaseSection title="Types de traitement" class="space-y-4">
           <div class="flex flex-col gap-3 md:flex-row md:items-end">
             <div class="w-full md:flex-1">
