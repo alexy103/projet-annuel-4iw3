@@ -14,6 +14,7 @@ export default defineNuxtRouteMiddleware((to) => {
     "/verify-code",
     "/reset-password",
     "/auth/github/callback",
+    "/confidentialite",
   ];
   const accessToken = localStorage.getItem("accessToken");
   const roleId = localStorage.getItem("roleId");
