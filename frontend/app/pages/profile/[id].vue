@@ -441,6 +441,15 @@ onUnmounted(() => {
       </BaseButton>
     </div>
 
+    <div class="mt-6 text-center">
+      <NuxtLink
+        to="/confidentialite"
+        class="text-grey-700 text-sm underline"
+      >
+        Politique de confidentialité & cookies
+      </NuxtLink>
+    </div>
+
     <BasePopup v-model="showSetupPopup" fit>
       <div class="w-72 space-y-4 text-center">
         <template v-if="!recoveryCodes">

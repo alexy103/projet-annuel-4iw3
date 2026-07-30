@@ -15,8 +15,13 @@ export default defineNuxtRouteMiddleware((to) => {
     "/reset-password",
     "/auth/github/callback",
   ];
+  const openRoutes = ["/confidentialite"];
   const accessToken = localStorage.getItem("accessToken");
   const roleId = localStorage.getItem("roleId");
+
+  if (openRoutes.includes(to.path)) {
+    return;
+  }
 
   if (!accessToken && !publicRoutes.includes(to.path)) {
     return navigateTo("/login");

@@ -5,18 +5,24 @@ const config = useRuntimeConfig();
 
 const ready = computed(() => !authStore.isAuthenticated || userStore.isReady);
 
-useHead({
-  script:
-    config.public.umamiWebsiteId && config.public.umamiScriptUrl
-      ? [
-          {
-            src: config.public.umamiScriptUrl,
-            defer: true,
-            "data-website-id": config.public.umamiWebsiteId,
-          },
-        ]
-      : [],
-});
+const { analyticsAllowed } = useCookieConsent();
+
+useHead(
+  computed(() => ({
+    script:
+      analyticsAllowed.value &&
+      config.public.umamiWebsiteId &&
+      config.public.umamiScriptUrl
+        ? [
+            {
+              src: config.public.umamiScriptUrl,
+              defer: true,
+              "data-website-id": config.public.umamiWebsiteId,
+            },
+          ]
+        : [],
+  })),
+);
 </script>
 
 <template>
@@ -34,5 +40,7 @@ useHead({
         />
       </div>
     </ClientOnly>
+
+    <CookieConsent />
   </NuxtLayout>
 </template>
