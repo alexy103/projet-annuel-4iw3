@@ -59,6 +59,12 @@ async function mockProfileEndpoints(page: Page) {
   );
 }
 
+test.beforeEach(async ({ context }) => {
+  await context.addCookies([
+    { name: "cookie_consent", value: "refused", url: "http://localhost:3000" },
+  ]);
+});
+
 test.describe("Login flow", () => {
   test("successful login redirects to the dashboard", async ({ page }) => {
     await mockDashboardEndpoints(page);
