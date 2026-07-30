@@ -1,0 +1,13 @@
+process.env.JWT_SECRET = "test-jwt-secret-that-is-long-enough-32ch";
+process.env.JWT_REFRESH_SECRET = "test-refresh-secret-that-is-long-32ch";
+process.env.PEPPER_SECRET = "test-pepper-secret";
+process.env.API_KEY = "test-api-key";
+process.env.DATABASE_URL = "postgresql://test:test@localhost:5432/test_db";
+process.env.NODE_ENV = "test";
+process.env.SMTP_HOST = "localhost";
+process.env.SMTP_PORT = "1025";
+process.env.SMTP_USER = "test";
+process.env.SMTP_PASS = "test";
+process.env.SMTP_FROM = "test@test.com";
+process.env.GITHUB_CLIENT_ID = "test-client-id";
+process.env.GITHUB_CLIENT_SECRET = "test-client-secret";

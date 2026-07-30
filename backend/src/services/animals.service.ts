@@ -1,0 +1,128 @@
+import { AppError } from '../types';
+import { animalsRepository, microshipsRepository, speciesRepository } from '../repositories';
+import { Animal, CreateAnimalPayload, Microship, Specie, UpdateAnimalPayload } from '../schemas';
+
+export const animalService = {
+	async getAll(callerId: number, role: string): Promise<Animal[]> {
+		if (role === 'admin') return animalsRepository.findAll();
+		if (role === 'user') return animalsRepository.findByUserId(callerId);
+		return animalsRepository.findAllShared();
+	},
+
+	async getById(animalId: number, role: string, callerId?: number): Promise<Animal> {
+		const animal = await animalsRepository.findById(animalId);
+		if (!animal) throw new AppError('Animal not found', 404);
+
+		if (role === 'admin') return animal;
+
+		const isOwner = callerId !== undefined && animal.user_id === callerId;
+
+		if (!animal.is_shared && !isOwner) throw new AppError('Access denied', 403);
+
+		return animal;
+	},
+
+	async getSharedAnimals(): Promise<Animal[]> {
+		return animalsRepository.findAllShared();
+	},
+
+	async getByUserId(userId: number, role: string, callerId?: number): Promise<Animal[]> {
+		const animals = await animalsRepository.findByUserId(userId);
+		if (role === 'user' && userId !== callerId) return animals.filter((a) => a.is_shared);
+		if (role === 'clinic' && userId !== callerId) return animals.filter((a) => a.is_shared);
+		return animals;
+	},
+
+	async getByName(name: string, callerId: number, role: string): Promise<Animal[]> {
+		if (role === 'admin') return animalsRepository.findByName(name);
+		if (role === 'user') return animalsRepository.findByName(name, callerId);
+		const animals = await animalsRepository.findByName(name);
+		return animals.filter((a) => a.is_shared || a.user_id === callerId);
+	},
+
+	async create(data: CreateAnimalPayload): Promise<Animal> {
+		if (data.microship_id) {
+			const existingMicroship: Microship = await microshipsRepository.findById(data.microship_id);
+			if (!existingMicroship) {
+				throw new AppError('Microship not found', 404);
+			}
+		}
+
+		const existingSpecie: Specie = await speciesRepository.findById(data.species_id);
+		if (!existingSpecie) {
+			throw new AppError('Specie not found', 404);
+		}
+
+		return animalsRepository.create(data);
+	},
+
+	async update(animalId: number, data: UpdateAnimalPayload, callerId: number, role: string): Promise<Animal> {
+		const existingAnimal: Animal = await animalsRepository.findById(animalId);
+		if (!existingAnimal) throw new AppError('Animal not found', 404);
+		if (role === 'user' && existingAnimal.user_id !== callerId) throw new AppError('Access denied', 403);
+
+		if (data.microship_id) {
+			const existingMicroship: Microship = await microshipsRepository.findById(data.microship_id);
+			if (!existingMicroship) throw new AppError('Microship not found', 404);
+		}
+
+		if (data.species_id) {
+			const existingSpecie: Specie = await speciesRepository.findById(data.species_id);
+			if (!existingSpecie) throw new AppError('Specie not found', 404);
+		}
+
+		return animalsRepository.update(animalId, data);
+	},
+
+	async assignMicroship(animalId: number, microshipId: number | null, callerId: number, role: string): Promise<Animal> {
+		const existingAnimal: Animal = await animalsRepository.findById(animalId);
+		if (!existingAnimal) throw new AppError('Animal not found', 404);
+		if (role === 'user' && existingAnimal.user_id !== callerId) throw new AppError('Access denied', 403);
+
+		if (microshipId !== null) {
+			const existingMicroship: Microship = await microshipsRepository.findById(microshipId);
+			if (!existingMicroship) throw new AppError('Microship not found', 404);
+
+			const linked = await animalsRepository.findByMicroshipId(microshipId);
+			const alreadyLinked = linked.find((a) => a.id !== animalId);
+			if (alreadyLinked) throw new AppError('Microship already assigned to another animal', 409);
+		}
+
+		return animalsRepository.updateMicroship(animalId, microshipId);
+	},
+
+	async setIsShared(animalId: number, isShared: boolean, callerId: number, role: string): Promise<Animal> {
+		const existingAnimal: Animal = await animalsRepository.findById(animalId);
+		if (!existingAnimal) throw new AppError('Animal not found', 404);
+		if (role === 'user' && existingAnimal.user_id !== callerId) throw new AppError('Access denied', 403);
+
+		if (existingAnimal.is_shared === isShared) throw new AppError(isShared ? 'Animal already shared' : 'Animal already unshared', 409);
+
+		return animalsRepository.updateIsShared(animalId, isShared);
+	},
+
+	async setIsDeceased(animalId: number, isDeceased: boolean, callerId: number, role: string): Promise<Animal> {
+		const existingAnimal: Animal = await animalsRepository.findById(animalId);
+		if (!existingAnimal) throw new AppError('Animal not found', 404);
+		if (role === 'user' && existingAnimal.user_id !== callerId) throw new AppError('Access denied', 403);
+
+		if (existingAnimal.is_deceased === isDeceased) throw new AppError(isDeceased ? 'Animal already deceased' : 'Animal already undeceased', 409);
+
+		return animalsRepository.updateIsDeceased(animalId, isDeceased);
+	},
+
+	async uploadProfilePicture(animalId: number, picturePath: string, callerId: number, role: string): Promise<Animal> {
+		const existingAnimal: Animal = await animalsRepository.findById(animalId);
+		if (!existingAnimal) throw new AppError('Animal not found', 404);
+		if (role === 'user' && existingAnimal.user_id !== callerId) throw new AppError('Access denied', 403);
+		return animalsRepository.updateProfilePicture(animalId, picturePath);
+	},
+
+	async delete(animalId: number, callerId: number, role: string): Promise<Animal> {
+		const existingAnimal: Animal = await animalsRepository.findById(animalId);
+		if (!existingAnimal) throw new AppError('Animal not found', 404);
+		if (role === 'user' && existingAnimal.user_id !== callerId) throw new AppError('Access denied', 403);
+
+		return animalsRepository.deleteWithDependencies(animalId);
+	},
+};
